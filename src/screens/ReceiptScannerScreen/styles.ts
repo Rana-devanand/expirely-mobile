@@ -1,0 +1,188 @@
+import { StyleSheet } from "react-native";
+import { ThemeType } from "../../constants/theme";
+
+export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 60,
+      paddingBottom: 20,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: theme.colors.card,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: theme.colors.text,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingBottom: 40,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: 60,
+    },
+    iconCircle: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: theme.colors.primary + "15",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: theme.colors.text,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    emptySubtitle: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 24,
+      marginBottom: 32,
+      paddingHorizontal: 20,
+    },
+    scanButton: {
+      backgroundColor: theme.colors.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 32,
+      paddingVertical: 16,
+      borderRadius: 16,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    buttonText: {
+      color: "#FFF",
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    previewCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 24,
+      overflow: "hidden",
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    previewImage: {
+      width: "100%",
+      height: 250,
+      resizeMode: "cover",
+    },
+    retakeButton: {
+      padding: 12,
+      alignItems: "center",
+      backgroundColor: theme.colors.background + "80",
+    },
+    retakeText: {
+      color: theme.colors.primary,
+      fontWeight: "bold",
+    },
+    loadingBox: {
+      padding: 40,
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: 16,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+    },
+    itemsContainer: {
+      marginTop: 8,
+    },
+    resultsHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    resultsTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: theme.colors.text,
+    },
+    addAllText: {
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    itemCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.card,
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    itemInfo: {
+      flex: 1,
+    },
+    itemName: {
+      fontSize: 16,
+      fontWeight: "bold",
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    itemMeta: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginBottom: 8,
+    },
+    tag: {
+      backgroundColor: theme.colors.primary + "10",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      marginRight: 8,
+      marginBottom: 4,
+    },
+    tagText: {
+      fontSize: 12,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    expiryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    expiryText: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginLeft: 6,
+    },
+    addButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginLeft: 12,
+    },
+  });

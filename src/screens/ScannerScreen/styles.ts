@@ -1,0 +1,192 @@
+import { StyleSheet, Dimensions, Platform } from "react-native";
+import { ThemeType } from "../../constants/theme";
+
+const { width, height } = Dimensions.get("window");
+
+export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#000", // Full dark for camera screen
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: Platform.OS === "ios" ? 10 : 20,
+      paddingBottom: 20,
+      backgroundColor: isDarkMode ? "#111827" : "#FFF",
+    },
+    headerButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: theme.colors.card,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: theme.colors.text,
+    },
+    content: {
+      flex: 1,
+    },
+    cameraContainer: {
+      flex: 1,
+      backgroundColor: "#000",
+      overflow: "hidden",
+    },
+    viewfinderCenterer: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    viewfinderContainer: {
+      width: width * 0.7,
+      height: width * 0.7,
+      position: "relative",
+    },
+    viewfinder: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: "rgba(255, 255, 255, 0.05)",
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    cornerBase: {
+      position: "absolute",
+      width: 40,
+      height: 40,
+      borderColor: "#45D1A0",
+      borderWidth: 4,
+    },
+    topLeft: {
+      top: -2,
+      left: -2,
+      borderRightWidth: 0,
+      borderBottomWidth: 0,
+      borderTopLeftRadius: 24,
+    },
+    topRight: {
+      top: -2,
+      right: -2,
+      borderLeftWidth: 0,
+      borderBottomWidth: 0,
+      borderTopRightRadius: 24,
+    },
+    bottomLeft: {
+      bottom: -2,
+      left: -2,
+      borderRightWidth: 0,
+      borderTopWidth: 0,
+      borderBottomLeftRadius: 24,
+    },
+    bottomRight: {
+      bottom: -2,
+      right: -2,
+      borderLeftWidth: 0,
+      borderTopWidth: 0,
+      borderBottomRightRadius: 24,
+    },
+    hintContainer: {
+      position: "absolute",
+      bottom: 20,
+      left: 0,
+      right: 0,
+      alignItems: "center",
+      paddingHorizontal: 40,
+    },
+    hintText: {
+      color: "#FFFFFF",
+      opacity: 0.8,
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    bottomSheet: {
+      backgroundColor: isDarkMode ? "#1F2937" : "#FFFFFF",
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      paddingBottom: Platform.OS === "ios" ? 40 : 20,
+    },
+    manualButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "#F1F5F9",
+      height: 56,
+      borderRadius: 16,
+      gap: 12,
+    },
+    manualButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#FFF" : "#1A1C1E",
+    },
+    manualEntryContainer: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111827" : "#F8FAFC",
+      justifyContent: "center",
+      padding: 20,
+    },
+    manualCard: {
+      backgroundColor: isDarkMode ? "#1F2937" : "#FFFFFF",
+      padding: 24,
+      borderRadius: 24,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+    },
+    manualTitle: {
+      fontSize: 22,
+      fontWeight: "bold",
+      marginBottom: 8,
+    },
+    manualSubtitle: {
+      fontSize: 14,
+      color: "#94A3B8",
+      marginBottom: 24,
+    },
+    inputWrapper: {
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.2)" : "#F1F5F9",
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255,255,255,0.1)" : "transparent",
+    },
+    manualInput: {
+      height: 60,
+      fontSize: 20,
+      fontWeight: "600",
+      letterSpacing: 2,
+    },
+    lookupButton: {
+      height: 56,
+      backgroundColor: theme.colors.primary,
+      borderRadius: 16,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    lookupButtonText: {
+      fontSize: 16,
+      fontWeight: "bold",
+      color: "#FFF",
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.7)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 100,
+    },
+  });

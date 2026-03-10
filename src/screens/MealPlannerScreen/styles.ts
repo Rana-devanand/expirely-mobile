@@ -1,0 +1,172 @@
+import { StyleSheet } from "react-native";
+import { ThemeType } from "../../constants/theme";
+
+export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 60,
+      paddingBottom: 20,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: theme.colors.card,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    refreshButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: theme.colors.card,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: theme.colors.text,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingBottom: 40,
+    },
+    loadingContainer: {
+      height: 400,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: 16,
+      color: theme.colors.textSecondary,
+      fontSize: 16,
+    },
+    introCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 24,
+      padding: 24,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    introTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    introSubtitle: {
+      fontSize: 15,
+      color: theme.colors.textSecondary,
+      lineHeight: 22,
+    },
+    mealCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    mealHeader: {
+      marginBottom: 16,
+    },
+    typeTag: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.primary + "15",
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    typeText: {
+      color: theme.colors.primary,
+      fontWeight: "bold",
+      fontSize: 12,
+      textTransform: "uppercase",
+    },
+    mealName: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: theme.colors.text,
+    },
+    detailRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    detailTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.colors.text,
+      marginLeft: 8,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    detailText: {
+      fontSize: 15,
+      color: theme.colors.textSecondary,
+      lineHeight: 22,
+      marginLeft: 22,
+    },
+    snackCard: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 24,
+      padding: 24,
+      marginTop: 8,
+    },
+    snackLabel: {
+      color: "#FFF",
+      fontSize: 12,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      opacity: 0.8,
+      marginBottom: 8,
+    },
+    snackName: {
+      color: "#FFF",
+      fontSize: 22,
+      fontWeight: "bold",
+      marginBottom: 8,
+    },
+    snackDesc: {
+      color: "#FFF",
+      fontSize: 15,
+      lineHeight: 22,
+      opacity: 0.9,
+    },
+    emptyContainer: {
+      height: 300,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    emptyText: {
+      color: theme.colors.textSecondary,
+      marginBottom: 20,
+    },
+    generateButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    buttonText: {
+      color: "#FFF",
+      fontWeight: "bold",
+    },
+  });
