@@ -16,6 +16,7 @@ import { loginSuccess, logout } from "../src/store/authSlice";
 import { setOnboardingComplete } from "../src/store/uiSlice";
 import { userService } from "../src/services/user";
 import { ExpiryNotificationService } from "../src/services/ExpiryNotificationService";
+import { checkForAppUpdate } from "../src/services/inAppUpdate.service";
 import { ModalProvider } from "../src/hooks/useGlobalModal";
 import GlobalModal from "../src/components/GlobalModal";
 import Toast from "react-native-toast-message";
@@ -97,6 +98,12 @@ function AppLayoutContent() {
         // 3a. Initialize Expiry Notifications
         console.log("🔔 Initializing Notifications...");
         await ExpiryNotificationService.requestPermission();
+
+        // 3b. Check for Google Play in-app update (non-blocking)
+        console.log("🔄 Checking for app updates...");
+        checkForAppUpdate().catch((e) =>
+          console.warn("[Update] Check skipped:", e.message),
+        );
 
         // 4. Startup Redirect Logic
         // In Expo Router, groups like (auth) are skipped in the URL.

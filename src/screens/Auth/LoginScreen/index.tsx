@@ -24,6 +24,7 @@ import {
   loginSuccess,
   loginFailure,
   googleLogin,
+  registerFcmToken,
 } from "../../../store/authSlice";
 import { RootState, AppDispatch } from "../../../store";
 import { googleSignInService } from "../../../services/googleAuth";
@@ -97,6 +98,8 @@ export default function LoginScreen() {
             refreshToken: response.data.refreshToken,
           }),
         );
+        // Register FCM token after email login (non-blocking)
+        dispatch(registerFcmToken());
         router.replace("/(tabs)");
       } else {
         throw new Error(response.message || "Login failed");

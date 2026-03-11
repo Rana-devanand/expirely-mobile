@@ -6,6 +6,7 @@ import { storage } from "../services/storage";
 import { clearProducts } from "./productSlice";
 import { resetUI } from "./uiSlice";
 import { router } from "expo-router";
+import messaging from "@react-native-firebase/messaging";
 
 export const googleLogin = createAsyncThunk(
   "auth/googleLogin",
@@ -20,6 +21,8 @@ export const googleLogin = createAsyncThunk(
         dispatch(
           authSlice.actions.loginSuccess({ user, accessToken, refreshToken }),
         );
+        // Register FCM token after successful login (non-blocking)
+        dispatch(registerFcmToken() as any);
         return response.data;
       } else {
         dispatch(
@@ -37,6 +40,38 @@ export const googleLogin = createAsyncThunk(
     }
   },
 );
+
+/**
+ * Registers the device FCM token with the backend.
+ * Call this after any successful login (email/google).
+ */
+export const registerFcmToken = createAsyncThunk(
+  "auth/registerFcmToken",
+  async () => {
+    try {
+      // Request notification permission
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (!enabled) {
+        console.log("[FCM] Notification permission not granted.");
+        return;
+      }
+
+      const fcmToken = await messaging().getToken();
+      if (fcmToken) {
+        await userService.updateFcmToken(fcmToken);
+        console.log("[FCM] Token registered with backend successfully.");
+      }
+    } catch (error: any) {
+      // Non-critical — don't crash login flow
+      console.warn("[FCM] Failed to register token:", error.message);
+    }
+  },
+);
+
 
 export const logoutUser = createAsyncThunk(
   "auth/logout",

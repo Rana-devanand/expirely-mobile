@@ -36,4 +36,9 @@ export const userService = {
       "/users/change-password",
       data,
     ),
+
+  updateFcmToken: (fcmToken: string) =>
+    api.post<{ success: boolean; message: string }>("/users/fcm-token", {
+      fcmToken,
+    }),
 };
