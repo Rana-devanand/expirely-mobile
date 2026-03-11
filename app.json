@@ -2,7 +2,7 @@
   "expo": {
     "name": "Expirely",
     "slug": "Expirely",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobileapp",
@@ -21,7 +21,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.expirely.app",
+      "package": "com.expirely.mobile",
+      "versionCode": 3,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
