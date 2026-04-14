@@ -61,13 +61,15 @@ export default function AddProductScreen() {
   const { categories, loading: categoriesLoading } = useSelector(
     (state: RootState) => state.category,
   );
-  const { id, scannedName, scannedBarcode, scannedImageUrl, scannedCategory } =
+  const { id, scannedName, scannedBarcode, scannedImageUrl, scannedCategory, scannedExpiryDate, scannedIngredients } =
     useLocalSearchParams<{
       id: string;
       scannedName?: string;
       scannedBarcode?: string;
       scannedImageUrl?: string;
       scannedCategory?: string;
+      scannedExpiryDate?: string;
+      scannedIngredients?: string;
     }>();
   const isEditMode = !!id;
   const existingProduct = useSelector((state: RootState) =>
@@ -83,6 +85,7 @@ export default function AddProductScreen() {
   const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState("");
+  const [ingredients, setIngredients] = useState("");
   const [barcode, setBarcode] = useState("");
 
   const { takePhoto, pickImage } = useImagePicker();
@@ -102,6 +105,7 @@ export default function AddProductScreen() {
       if (scannedBarcode) setBarcode(scannedBarcode);
       if (scannedImageUrl) setProductImage(scannedImageUrl);
       if (scannedCategory) setCategory(scannedCategory);
+      if (scannedIngredients) setIngredients(scannedIngredients);
     }
   }, [
     isEditMode,
@@ -110,6 +114,8 @@ export default function AddProductScreen() {
     scannedBarcode,
     scannedImageUrl,
     scannedCategory,
+    scannedExpiryDate,
+    scannedIngredients
   ]);
 
   const handleAIScanLabel = async () => {
@@ -216,6 +222,7 @@ export default function AddProductScreen() {
               color: selectedColor,
               imageUrl: finalImageUrl,
               notes,
+              ingredients,
               qty,
               barcode,
             },
@@ -231,6 +238,7 @@ export default function AddProductScreen() {
             color: selectedColor,
             imageUrl: finalImageUrl,
             notes,
+            ingredients,
             qty,
             barcode,
           }),
@@ -468,18 +476,6 @@ export default function AddProductScreen() {
               </Text>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.secondaryButton,
-                (loading || isUploading || isAIAnalyzing) && { opacity: 0.5 },
-              ]}
-              onPress={() => setShowAddCategoryModal(true)}
-              activeOpacity={0.7}
-              disabled={loading || isUploading || isAIAnalyzing}
-            >
-              <Plus color={theme.colors.primary} size={18} />
-              <Text style={styles.secondaryButtonText}>Add Category</Text>
-            </TouchableOpacity>
 
             <TouchableOpacity
               style={[
@@ -626,14 +622,26 @@ export default function AddProductScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.label,
-                    isDarkMode && { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Category
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text
+                    style={[
+                      styles.label,
+                      { marginBottom: 0 },
+                      isDarkMode && { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    Category
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowAddCategoryModal(true)}
+                    disabled={loading || isUploading || isAIAnalyzing}
+                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                  >
+                    <Plus color={theme.colors.primary} size={16} />
+                    <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: '600', marginLeft: 4 }}>Add Category</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View ref={categoryButtonRef} collapsable={false}>
                   <TouchableOpacity
                     style={[
@@ -656,6 +664,22 @@ export default function AddProductScreen() {
                     </Text>
                     <ChevronDown size={20} color="#94A3B8" />
                   </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text
+                  style={[
+                    styles.label,
+                    isDarkMode && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Ingredients
+                </Text>
+                <View style={[styles.inputWrapper, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "#F1F5F9", minHeight: 80 }]}>
+                  <Text style={[styles.input, { color: ingredients ? theme.colors.text : "#94A3B8", paddingVertical: 10 }]}>
+                    {ingredients ? ingredients : "No ingredients found"}
+                  </Text>
                 </View>
               </View>
 
@@ -725,36 +749,12 @@ export default function AddProductScreen() {
                 </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.label,
-                    isDarkMode && { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Label Color
-                </Text>
-                <View style={styles.colorPickerContainer}>
-                  {COLORS.map((color) => (
-                    <TouchableOpacity
-                      key={color}
-                      style={[
-                        styles.colorCircle,
-                        { backgroundColor: color },
-                        selectedColor === color && styles.activeColorCircle,
-                      ]}
-                      onPress={() => setSelectedColor(color)}
-                    />
-                  ))}
-                </View>
-              </View>
-
               <TouchableOpacity
                 style={[
                   styles.submitButton,
                   name &&
-                    expiryDate &&
-                    category && { backgroundColor: theme.colors.primary },
+                  expiryDate &&
+                  category && { backgroundColor: theme.colors.primary },
                   loading && { opacity: 0.7 },
                 ]}
                 onPress={handleSave}

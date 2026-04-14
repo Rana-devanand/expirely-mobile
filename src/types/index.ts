@@ -11,6 +11,7 @@ export interface Product {
   qty?: number;
   progress?: number;
   notes?: string;
+  ingredients?: string;
   isConsumed?: boolean;
   created_at?: string;
 }

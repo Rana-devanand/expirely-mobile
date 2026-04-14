@@ -117,7 +117,7 @@ export default function InventoryScreen() {
 
         <View style={[styles.expiryBadge, { backgroundColor: badgeBg }]}>
           <Text style={[styles.expiryBadgeText, { color: statusColor }]}>
-            {product.daysLeft}d
+            {product.daysLeft < 0 ? "Expired" : `${product.daysLeft}d`}
           </Text>
         </View>
         <ChevronRight

@@ -79,6 +79,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       fontSize: 15,
       fontWeight: "bold",
       color: "#1E293B",
+      marginTop: 14,
     },
     inputWrapper: {
       height: 56,
@@ -273,7 +274,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 20,
-      marginTop: 8,
+      marginTop: 4,
     },
     qtyButton: {
       width: 48,
@@ -293,8 +294,8 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       textAlign: "center",
     },
     notesInput: {
-      height: 120,
-      textAlignVertical: "top",
-      paddingTop: 16,
+      height: 80,
+      textAlignVertical: "center",
+      paddingTop: 0,
     },
   });

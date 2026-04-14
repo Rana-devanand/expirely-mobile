@@ -135,7 +135,7 @@ export default function ProductListScreen() {
             },
           ]}
         >
-          {item.daysLeft}d
+          {item.daysLeft < 0 ? "Expired" : `${item.daysLeft}d`}
         </Text>
       </View>
       <ChevronRight

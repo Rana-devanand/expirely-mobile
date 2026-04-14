@@ -73,38 +73,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [dispatch]);
 
-  const notifications = [
-    {
-      id: "1",
-      title: "Expiry Alert",
-      description: "Your Organic Milk should be expire in 2 days.",
-      type: "warning",
-      time: "5h ago",
-      unread: true,
-      category: "dairy",
-    },
-    {
-      id: "2",
-      title: "Product Added",
-      description:
-        "Fresh Strawberries has been successfully added to your inventory.",
-      type: "success",
-      time: "7h ago",
-      unread: false,
-      category: "fruit",
-    },
-    {
-      id: "3",
-      title: "Lease Renewal Reminder",
-      description:
-        "Your Greek Yogurt is set to expire on October 15, 2023. consumed it.",
-      type: "error",
-      time: "7h ago",
-      unread: false,
-      category: "dairy",
-    },
-  ];
-
   const expiringSoon = activeProducts.filter((p) => p.status === "warning");
   const recentlyAdded = activeProducts.slice(-3).reverse();
   const allProducts = activeProducts.slice(0, 5); // Display first 5 for "All Products" section
@@ -215,7 +183,7 @@ export default function HomeScreen() {
         style={[styles.daysBadge, { backgroundColor: theme.colors.expiringBg }]}
       >
         <Text style={[styles.daysText, { color: theme.colors.error }]}>
-          {item.daysLeft}d left
+          {item.daysLeft < 0 ? "Expired" : `${item.daysLeft}d left`}
         </Text>
       </View>
     </TouchableOpacity>
@@ -280,7 +248,7 @@ export default function HomeScreen() {
             },
           ]}
         >
-          {item.daysLeft}d
+          {item.daysLeft < 0 ? "Expired" : `${item.daysLeft}d`}
         </Text>
       </View>
       <ChevronRight

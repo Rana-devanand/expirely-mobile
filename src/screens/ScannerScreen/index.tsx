@@ -32,6 +32,7 @@ export default function ScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
+  const [torch, setTorch] = useState(false);
 
   useEffect(() => {
     if (!permission) requestPermission();
@@ -58,6 +59,8 @@ export default function ScannerScreen() {
             scannedBarcode: barcode,
             scannedImageUrl: productInfo.imageUrl || "",
             scannedCategory: productInfo.category || "",
+            scannedExpiryDate: productInfo.expirationDate || productInfo.estimatedExpiry || "",
+            scannedIngredients: productInfo.ingredients || "",
           },
         });
       } else {
@@ -130,8 +133,11 @@ export default function ScannerScreen() {
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
           {isManualMode ? "Enter Barcode" : "Scan Barcode"}
         </Text>
-        <TouchableOpacity style={styles.headerButton}>
-          <Zap color={theme.colors.primary} size={24} />
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={() => setTorch(!torch)}
+        >
+          <Zap color={torch ? "#FBBF24" : theme.colors.primary} size={24} fill={torch ? "#FBBF24" : "none"} />
         </TouchableOpacity>
       </View>
 
@@ -141,6 +147,7 @@ export default function ScannerScreen() {
           <View style={styles.cameraContainer}>
             <CameraView
               style={StyleSheet.absoluteFill}
+              enableTorch={torch}
               onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
               barcodeScannerSettings={{
                 barcodeTypes: [

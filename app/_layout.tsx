@@ -12,7 +12,7 @@ import AnimatedSplashScreen from "../src/components/AnimatedSplashScreen";
 import OnboardingScreen from "../src/screens/OnboardingScreen";
 import { View } from "react-native";
 import { storage } from "../src/services/storage";
-import { loginSuccess, logout } from "../src/store/authSlice";
+import { loginSuccess, logout, registerFcmToken } from "../src/store/authSlice";
 import { setOnboardingComplete } from "../src/store/uiSlice";
 import { userService } from "../src/services/user";
 import { ExpiryNotificationService } from "../src/services/ExpiryNotificationService";
@@ -79,6 +79,8 @@ function AppLayoutContent() {
                   refreshToken: newRefresh,
                 }),
               );
+              // Refresh FCM token silently on each app startup (non-blocking)
+              dispatch(registerFcmToken() as any);
               authed = true;
             }
           } catch (e) {

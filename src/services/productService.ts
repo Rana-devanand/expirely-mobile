@@ -8,6 +8,7 @@ export interface CreateProductData {
   category: string;
   imageUrl?: string;
   notes?: string;
+  ingredients?: string;
   color?: string;
   qty?: number;
   isConsumed?: boolean;
@@ -79,6 +80,13 @@ export const productService = {
     const response = await api.post<{ success: boolean; data: any }>(
       "/products/extract-dates",
       { image: base64Image },
+    );
+    return response.data;
+  },
+  
+  getInventoryInsight: async (): Promise<any> => {
+    const response = await api.get<{ success: boolean; data: any }>(
+      "/products/insight",
     );
     return response.data;
   },

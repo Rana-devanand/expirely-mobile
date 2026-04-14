@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,11 +26,15 @@ dayjs.extend(isBetween);
 
 const { width } = Dimensions.get("window");
 
+import { productService } from "../../services/productService";
+
 export default function AnalyticsScreen() {
   const { theme, isDarkMode } = useAppTheme();
   const styles = getStyles(theme, isDarkMode);
 
   const { products } = useSelector((state: RootState) => state.products);
+  const [aiInsight, setAiInsight] = useState<string>("");
+  const [isInsightLoading, setIsInsightLoading] = useState<boolean>(false);
 
   // Status Data Calculation
   const statusStats = useMemo(() => {
@@ -105,6 +109,29 @@ export default function AnalyticsScreen() {
   };
 
   const totalItems = products.length;
+
+  useEffect(() => {
+    const fetchInsight = async () => {
+      if (totalItems === 0) {
+        setAiInsight("No items tracked yet. Add your first product to see insights!");
+        return;
+      }
+
+      try {
+        setIsInsightLoading(true);
+        const response = await productService.getInventoryInsight();
+        if (response.success && response.data?.message) {
+          setAiInsight(response.data.message);
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI insight:", error);
+      } finally {
+        setIsInsightLoading(false);
+      }
+    };
+
+    fetchInsight();
+  }, [totalItems, statusStats.good, statusStats.warning, statusStats.expired]);
 
   return (
     <View style={styles.container}>
@@ -362,9 +389,9 @@ export default function AnalyticsScreen() {
           </View>
           <View style={styles.tipContent}>
             <Text style={styles.tipText}>
-              {statusStats.warning > 0
+              {isInsightLoading ? "AI is generating insight..." : (aiInsight || (statusStats.warning > 0
                 ? `You have ${statusStats.warning} items expiring soon. Try to use them before they go to waste!`
-                : "Great job! All your items are fresh. Keep tracking to reduce food waste."}
+                : "Great job! All your items are fresh. Keep tracking to reduce food waste."))}
             </Text>
           </View>
         </TouchableOpacity>

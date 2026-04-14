@@ -8,13 +8,14 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     container: {
       flex: 1,
       backgroundColor: "#000", // Full dark for camera screen
+      marginTop:10
     },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       paddingHorizontal: 20,
-      paddingTop: Platform.OS === "ios" ? 10 : 20,
+      paddingTop: Platform.OS === "ios" ? 10 : 40,
       paddingBottom: 20,
       backgroundColor: isDarkMode ? "#111827" : "#FFF",
     },

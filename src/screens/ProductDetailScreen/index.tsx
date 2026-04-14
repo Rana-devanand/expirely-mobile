@@ -163,7 +163,7 @@ export default function ProductDetailScreen() {
               <Clock size={20} color={theme.colors.success} />
               <Text style={styles.cardTitle}>Expiry Countdown</Text>
             </View>
-            <Text style={styles.countdownValue}>{product.daysLeft}d</Text>
+            <Text style={styles.countdownValue}>{product.daysLeft < 0 ? "Expired" : `${product.daysLeft}d`}</Text>
           </View>
           <View style={styles.progressBarBg}>
             <View
@@ -171,6 +171,7 @@ export default function ProductDetailScreen() {
                 styles.progressBarFill,
                 {
                   width: `${Math.max(0, Math.min(100, (product.daysLeft / 10) * 100))}%`,
+                  backgroundColor: product.daysLeft < 0 ? theme.colors.error : theme.colors.primary,
                 },
               ]}
             />
@@ -192,7 +193,7 @@ export default function ProductDetailScreen() {
               <BarChart3 size={18} color={theme.colors.warning} />
             </View>
             <Text style={styles.gridLabel}>Days Remaining</Text>
-            <Text style={styles.gridValue}>{product.daysLeft} days</Text>
+            <Text style={styles.gridValue}>{product.daysLeft < 0 ? "Expired" : `${product.daysLeft} days`}</Text>
           </View>
 
           <View style={styles.gridItem}>
@@ -219,19 +220,37 @@ export default function ProductDetailScreen() {
             {product.notes || "No notes added for this product."}
           </Text>
         </View>
+
+        {product.ingredients ? (
+          <View style={[styles.notesCard, { marginTop: 16, marginBottom: 20 }]}>
+            <Text style={styles.notesLabel}>Ingredients</Text>
+            <View style={{ marginTop: 8 }}>
+              {product.ingredients.split(',').map((item, index) => {
+                const trimmed = item.trim();
+                if (!trimmed) return null;
+                return (
+                  <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
+                    <Text style={{ color: theme.colors.text, fontSize: 14, marginRight: 8 }}>•</Text>
+                    <Text style={{ color: theme.colors.text, fontSize: 14, flex: 1, lineHeight: 20 }}>{trimmed}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Footer Buttons */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.editBtn, loading && { opacity: 0.7 }]}
+          style={[styles.editBtn, loading && { opacity: 0.7 }, product.daysLeft < 0 && { opacity: 0.4 }]}
           onPress={() =>
             router.push({
               pathname: "/addProduct",
               params: { id: product.id },
             })
           }
-          disabled={loading}
+          disabled={loading || product.daysLeft < 0}
         >
           <Pencil size={20} color={theme.colors.text} />
           <Text style={styles.editBtnText}>Edit</Text>
