@@ -83,4 +83,21 @@ export const storage = {
       console.error("Error clearing storage", e);
     }
   },
+
+  saveTheme: async (isDarkMode: boolean) => {
+    try {
+      await AsyncStorage.setItem("@theme_dark_mode", JSON.stringify(isDarkMode));
+    } catch (e) {
+      console.error("Error saving theme", e);
+    }
+  },
+
+  getTheme: async () => {
+    try {
+      const value = await AsyncStorage.getItem("@theme_dark_mode");
+      return value ? JSON.parse(value) : false;
+    } catch (e) {
+      return false;
+    }
+  },
 };

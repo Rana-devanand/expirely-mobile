@@ -2,7 +2,7 @@
   "expo": {
     "name": "Expirely",
     "slug": "Expirely",
-    "version": "1.0.4",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobileapp",
@@ -22,7 +22,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.expirely.mobile",
-      "versionCode": 5,
+      "versionCode": 9,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
@@ -55,6 +55,12 @@
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4526433011293142~1785685531"
+        }
       ]
     ],
     "experiments": {
@@ -67,5 +73,8 @@
         "projectId": "6a993946-dcc9-4cdf-ab74-27fc6842ba29"
       }
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-4526433011293142~1785685531"
   }
 }

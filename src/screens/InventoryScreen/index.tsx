@@ -27,6 +27,7 @@ import {
   Check,
 } from "lucide-react-native";
 import { getStyles } from "./styles";
+import { formatRemainingTime } from "../../utils/dateHelpers";
 
 export default function InventoryScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -117,7 +118,7 @@ export default function InventoryScreen() {
 
         <View style={[styles.expiryBadge, { backgroundColor: badgeBg }]}>
           <Text style={[styles.expiryBadgeText, { color: statusColor }]}>
-            {product.daysLeft < 0 ? "Expired" : `${product.daysLeft}d`}
+            {formatRemainingTime(product.expiryDate, true)}
           </Text>
         </View>
         <ChevronRight

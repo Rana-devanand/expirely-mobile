@@ -22,6 +22,7 @@ import { useRouter } from "expo-router";
 import { getStyles } from "./styles";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { productService } from "../../services/productService";
+import { toast } from "../../utils/toast";
 
 export default function ScannerScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -64,6 +65,7 @@ export default function ScannerScreen() {
           },
         });
       } else {
+        toast.info("Product not found in our database. Please add it manually.");
         router.push({
           pathname: "/addProduct",
           params: { scannedBarcode: barcode },
@@ -71,6 +73,7 @@ export default function ScannerScreen() {
       }
     } catch (error) {
       console.error("Lookup failed:", error);
+      toast.info("Could not fetch product info. Please add it manually.");
       router.push({
         pathname: "/addProduct",
         params: { scannedBarcode: barcode },

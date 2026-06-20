@@ -1,12 +1,11 @@
 import React from "react";
-import { View, Text, Dimensions, StyleSheet, ScrollView } from "react-native";
-import LineChart from "react-native-chart-kit/dist/line-chart/LineChart";
+import { View, Text, Dimensions, StyleSheet } from "react-native";
+import PieChart from "react-native-chart-kit/dist/PieChart";
+import dayjs from "dayjs";
 import { useAppTheme } from "../hooks/useAppTheme";
 import { Product } from "../types";
-import dayjs from "dayjs";
 
-const screenWidth = Dimensions.get("window").width;
-const chartWidth = screenWidth * 1.5;
+const chartWidth = Dimensions.get("window").width - 64;
 
 interface Props {
   products: Product[];
@@ -15,72 +14,81 @@ interface Props {
 export default function ExpiryTrendsGraph({ products }: Props) {
   const { theme, isDarkMode } = useAppTheme();
 
-  // Calculate real data
-  const generateData = () => {
-    const labels: string[] = [];
-    const safeData: number[] = [];
-    const expiringData: number[] = [];
+  const breakdown = products.reduce(
+    (acc, product) => {
+      const daysToExpiry = dayjs(product.expiryDate)
+        .startOf("day")
+        .diff(dayjs().startOf("day"), "day");
 
-    const now = dayjs();
+      if (daysToExpiry < 0) acc.expired += 1;
+      else if (daysToExpiry <= 3) acc.urgent += 1;
+      else if (daysToExpiry <= 10) acc.soon += 1;
+      else acc.safe += 1;
 
-    // Generate 7 data points for the next 30 days (roughly every 5 days)
-    for (let i = 0; i < 7; i++) {
-      const date = now.add(i * 5, "day");
-      labels.push(date.format("MMM D"));
+      return acc;
+    },
+    { expired: 0, urgent: 0, soon: 0, safe: 0 },
+  );
 
-      let safeCount = 0;
-      let expiringCount = 0;
+  const total = products.length;
+  const summaryRows = [
+    {
+      label: "Expired",
+      value: breakdown.expired,
+      color: theme.colors.error,
+      helper: "Needs cleanup",
+    },
+    {
+      label: "0-3 days",
+      value: breakdown.urgent,
+      color: theme.colors.warning,
+      helper: "Use first",
+    },
+    {
+      label: "4-10 days",
+      value: breakdown.soon,
+      color: "#60A5FA",
+      helper: "Plan meals",
+    },
+    {
+      label: "Safe",
+      value: breakdown.safe,
+      color: theme.colors.success,
+      helper: "Healthy stock",
+    },
+  ];
 
-      products.forEach((p) => {
-        const expiry = dayjs(p.expiryDate);
-        const daysToExpiry = expiry.diff(date, "day");
+  const chartData = summaryRows
+    .filter((item) => item.value > 0)
+    .map((item) => ({
+      name: item.label,
+      population: item.value,
+      color: item.color,
+      legendFontColor: theme.colors.textSecondary,
+      legendFontSize: 11,
+    }));
 
-        if (daysToExpiry > 7) {
-          safeCount++;
-        } else if (daysToExpiry >= 0 && daysToExpiry <= 7) {
-          expiringCount++;
-        }
-      });
-
-      safeData.push(safeCount);
-      expiringData.push(expiringCount);
-    }
-
-    return {
-      labels,
-      datasets: [
-        {
-          data: safeData,
-          color: (opacity = 1) => `rgba(0, 229, 255, ${opacity})`,
-          strokeWidth: 3,
-        },
-        {
-          data: expiringData,
-          color: (opacity = 1) => `rgba(255, 171, 0, ${opacity})`,
-          strokeWidth: 2,
-        },
-      ],
-    };
-  };
-
-  const chartData = generateData();
+  const visibleChartData =
+    chartData.length > 0
+      ? chartData
+      : [
+          {
+            name: "No items",
+            population: 1,
+            color: theme.colors.border,
+            legendFontColor: theme.colors.textSecondary,
+            legendFontSize: 11,
+          },
+        ];
 
   const chartConfig = {
     backgroundColor: theme.colors.card,
     backgroundGradientFrom: theme.colors.card,
     backgroundGradientTo: theme.colors.card,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity * 0.1})`,
-    labelColor: (opacity = 1) => theme.colors.text,
-    propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: theme.colors.card,
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: "4",
-      stroke: isDarkMode ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.05)",
-    },
+    color: (opacity = 1) =>
+      isDarkMode
+        ? `rgba(255, 255, 255, ${opacity})`
+        : `rgba(15, 23, 42, ${opacity})`,
   };
 
   return (
@@ -96,56 +104,96 @@ export default function ExpiryTrendsGraph({ products }: Props) {
       <View style={styles.header}>
         <View>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            Expiry Trends
+            Expiry Risk
           </Text>
-          <Text
-            style={[styles.subtitle, { color: theme.colors.textSecondary }]}
-          >
-            Next 30 days overview
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            Inventory grouped by urgency
           </Text>
         </View>
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View style={[styles.dot, { backgroundColor: "#00E5FF" }]} />
-            <Text
-              style={[styles.legendText, { color: theme.colors.textSecondary }]}
-            >
-              Safe
-            </Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.dot, { backgroundColor: "#FFAB00" }]} />
-            <Text
-              style={[styles.legendText, { color: theme.colors.textSecondary }]}
-            >
-              Expiring
-            </Text>
-          </View>
+        <View
+          style={[
+            styles.totalPill,
+            {
+              backgroundColor: isDarkMode
+                ? "rgba(255,255,255,0.06)"
+                : "#EFF7F2",
+            },
+          ]}
+        >
+          <Text style={[styles.totalValue, { color: theme.colors.text }]}>
+            {total}
+          </Text>
+          <Text style={[styles.totalLabel, { color: theme.colors.textSecondary }]}>
+            items
+          </Text>
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <LineChart
-          data={chartData}
+      <View style={styles.chartWrap}>
+        <PieChart
+          data={visibleChartData}
           width={chartWidth}
-          height={200}
+          height={172}
           chartConfig={chartConfig}
-          bezier
-          withVerticalLines={false}
-          withHorizontalLines={true}
-          withDots={true}
-          withShadow={false}
-          fromZero={true}
-          style={styles.chart}
-          yAxisLabel=""
-          yAxisSuffix=""
-          segments={4}
+          accessor="population"
+          backgroundColor="transparent"
+          paddingLeft="0"
+          center={[8, 0]}
+          absolute
+          hasLegend={false}
         />
-      </ScrollView>
+        <View
+          style={[
+            styles.centerMetric,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.centerValue, { color: theme.colors.text }]}>
+            {total}
+          </Text>
+          <Text style={[styles.centerLabel, { color: theme.colors.textSecondary }]}>
+            tracked
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.summaryGrid}>
+        {summaryRows.map((row) => (
+          <View
+            key={row.label}
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: isDarkMode
+                  ? "rgba(255,255,255,0.04)"
+                  : "#F7FCF9",
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <View style={styles.summaryTopRow}>
+              <View style={[styles.dot, { backgroundColor: row.color }]} />
+              <Text style={[styles.summaryValue, { color: row.color }]}>
+                {row.value}
+              </Text>
+            </View>
+            <Text style={[styles.summaryLabel, { color: theme.colors.text }]}>
+              {row.label}
+            </Text>
+            <Text
+              style={[
+                styles.summaryHelper,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              {row.helper}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -153,53 +201,107 @@ export default function ExpiryTrendsGraph({ products }: Props) {
 const styles = StyleSheet.create({
   container: {
     marginVertical: 10,
-    borderRadius: 24,
+    borderRadius: 28,
     padding: 16,
-    paddingBottom: 10,
     borderWidth: 1,
     marginBottom: 20,
     overflow: "hidden",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 15,
-    paddingHorizontal: 4,
+    marginBottom: 12,
+    paddingHorizontal: 2,
   },
   title: {
     fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
   subtitle: {
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 3,
+    fontWeight: "600",
   },
-  legendContainer: {
+  totalPill: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 4,
+    alignItems: "baseline",
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  legendItem: {
-    flexDirection: "row",
+  totalValue: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  totalLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  chartWrap: {
+    minHeight: 172,
     alignItems: "center",
-    gap: 6,
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  centerMetric: {
+    position: "absolute",
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  centerValue: {
+    fontSize: 24,
+    fontWeight: "900",
+    lineHeight: 28,
+  },
+  centerLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  summaryCard: {
+    width: "48.3%",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 12,
+  },
+  summaryTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 7,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
   },
-  legendText: {
-    fontSize: 12,
-    fontWeight: "500",
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: "900",
   },
-  scrollContent: {
-    paddingRight: 20,
+  summaryLabel: {
+    fontSize: 13,
+    fontWeight: "900",
+    marginBottom: 2,
   },
-  chart: {
-    marginLeft: -15, // Align with Y-axis
-    paddingTop: 10,
+  summaryHelper: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });

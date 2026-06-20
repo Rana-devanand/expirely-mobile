@@ -13,7 +13,7 @@ import OnboardingScreen from "../src/screens/OnboardingScreen";
 import { View } from "react-native";
 import { storage } from "../src/services/storage";
 import { loginSuccess, logout, registerFcmToken } from "../src/store/authSlice";
-import { setOnboardingComplete } from "../src/store/uiSlice";
+import { setOnboardingComplete, setTheme } from "../src/store/uiSlice";
 import { userService } from "../src/services/user";
 import { ExpiryNotificationService } from "../src/services/ExpiryNotificationService";
 import { checkForAppUpdate } from "../src/services/inAppUpdate.service";
@@ -50,6 +50,10 @@ function AppLayoutContent() {
         if (isOnboardingDone) {
           dispatch(setOnboardingComplete(true));
         }
+
+        // 1b. Load stored theme preference
+        const storedTheme = await storage.getTheme();
+        dispatch(setTheme(storedTheme));
 
         // 2. Initial Auth Check
         console.log("🔑 Checking Refresh Token...");
@@ -199,6 +203,18 @@ function AppLayoutContent() {
                     />
                     <Stack.Screen
                       name="product/[id]"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="admin/users"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="admin/products"
                       options={{
                         headerShown: false,
                       }}

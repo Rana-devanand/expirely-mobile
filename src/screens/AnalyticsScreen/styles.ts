@@ -92,7 +92,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     progressTrack: {
       height: 6,
-      backgroundColor: isDarkMode ? "#1E293B" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#1E293B" : "#EFF7F2",
       borderRadius: 3,
       marginTop: 6,
       width: "100%",

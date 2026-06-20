@@ -5,17 +5,17 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Image as RNImage,
 } from "react-native";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import {
   Sparkles,
-  CookingPot,
-  Refrigerator,
-  Apple,
-  ReceiptText,
-  CalendarDays,
+  ChefHat,
+  HeartPulse,
+  ScanBarcode,
+  CalendarClock,
   ChevronRight,
+  Wand2,
+  PackageCheck,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { getStyles } from "./styles";
@@ -30,7 +30,8 @@ export default function AISmartHubScreen() {
       id: "storage-guru",
       title: "AI Storage Guru",
       desc: "Get expert tips to make your food last longer.",
-      icon: Refrigerator,
+      meta: "Storage advice",
+      icon: PackageCheck,
       color: "#3B82F6",
       bgColor: isDarkMode ? "rgba(59, 130, 246, 0.1)" : "#EFF6FF",
       badge: "Maintenance",
@@ -38,8 +39,9 @@ export default function AISmartHubScreen() {
     {
       id: "recipe-gen",
       title: "Zero Waste Cook",
-      desc: "Genereate recipes using items expiring soon.",
-      icon: CookingPot,
+      desc: "Generate recipes using items expiring soon.",
+      meta: "Recipe builder",
+      icon: ChefHat,
       color: "#F59E0B",
       bgColor: isDarkMode ? "rgba(245, 158, 11, 0.1)" : "#FFFBEB",
       badge: "Top Pick",
@@ -48,24 +50,17 @@ export default function AISmartHubScreen() {
       id: "nutrition",
       title: "AI Nutrition Insight",
       desc: "Analyze health benefits of your stock.",
-      icon: Apple,
+      meta: "Nutrition score",
+      icon: HeartPulse,
       color: "#10B981",
       bgColor: isDarkMode ? "rgba(16, 185, 129, 0.1)" : "#ECFDF5",
-    },
-    {
-      id: "receipt-scan",
-      title: "AI Receipt Scanner",
-      desc: "Add multiple items at once from your bill.",
-      icon: ReceiptText,
-      color: "#8B5CF6",
-      bgColor: isDarkMode ? "rgba(139, 92, 246, 0.1)" : "#F5F3FF",
-      badge: "Vision",
     },
     {
       id: "meal-plan",
       title: "AI Meal Planner",
       desc: "A personalized 7-day plan for your items.",
-      icon: CalendarDays,
+      meta: "Weekly planning",
+      icon: CalendarClock,
       color: "#EC4899",
       bgColor: isDarkMode ? "rgba(236, 72, 153, 0.1)" : "#FDF2F8",
     },
@@ -73,26 +68,52 @@ export default function AISmartHubScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Unlock Smarter Tracking</Text>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={styles.title}>AI Smart Hub</Text>
-          <Sparkles
-            size={28}
-            color={theme.colors.primary}
-            style={{ marginLeft: 10 }}
-          />
-        </View>
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.subtitle}>
-          Use the power of AI to reduce waste, save money, and eat healthier
-          based on your inventory.
-        </Text>
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroBadge}>
+              <Sparkles size={14} color={theme.colors.primary} />
+              <Text style={styles.heroBadgeText}>Smart assistant</Text>
+            </View>
+            <View style={styles.heroIcon}>
+              <Wand2 size={24} color={theme.colors.primary} />
+            </View>
+          </View>
+          <Text style={styles.greeting}>AI Smart Hub</Text>
+          <Text style={styles.title}>Make every item work harder</Text>
+          <Text style={styles.subtitle}>
+            Turn your inventory into recipes, meal plans, storage tips, and
+            healthier choices before food goes to waste.
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.featuredCard}
+          activeOpacity={0.82}
+          onPress={() => router.push("/recipe-generator")}
+        >
+          <View style={styles.featuredContent}>
+            <View style={styles.featuredBadge}>
+              <Sparkles size={13} color="#FFFFFF" />
+              <Text style={styles.featuredBadgeText}>Recommended</Text>
+            </View>
+            <Text style={styles.featuredTitle}>Cook with expiring items</Text>
+            <Text style={styles.featuredDesc}>
+              Build a recipe from what needs attention first.
+            </Text>
+          </View>
+          <View style={styles.featuredIcon}>
+            <ChefHat size={30} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>AI Tools</Text>
+          <Text style={styles.sectionSubtitle}>{features.length} assistants</Text>
+        </View>
 
         {features.map((item) => (
           <TouchableOpacity
@@ -106,8 +127,6 @@ export default function AISmartHubScreen() {
                 router.push("/recipe-generator");
               } else if (item.id === "nutrition") {
                 router.push("/nutrition-insight");
-              } else if (item.id === "receipt-scan") {
-                router.push("/receipt-scanner");
               } else if (item.id === "meal-plan") {
                 router.push("/meal-planner");
               } else {
@@ -119,20 +138,29 @@ export default function AISmartHubScreen() {
               <item.icon size={28} color={item.color} />
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDesc}>{item.desc}</Text>
-            </View>
-            <ChevronRight size={20} color={theme.colors.border} />
-
-            {item.badge && (
-              <View
-                style={[styles.badge, { backgroundColor: item.color + "20" }]}
-              >
-                <Text style={[styles.badgeText, { color: item.color }]}>
-                  {item.badge}
-                </Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                {item.badge && (
+                  <View
+                    style={[
+                      styles.badge,
+                      { backgroundColor: item.color + "18" },
+                    ]}
+                  >
+                    <Text style={[styles.badgeText, { color: item.color }]}>
+                      {item.badge}
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
+              <Text style={styles.cardDesc}>{item.desc}</Text>
+              <Text style={[styles.cardMeta, { color: item.color }]}>
+                {item.meta}
+              </Text>
+            </View>
+            <View style={styles.chevronWrap}>
+              <ChevronRight size={18} color={theme.colors.textSecondary} />
+            </View>
           </TouchableOpacity>
         ))}
       </ScrollView>

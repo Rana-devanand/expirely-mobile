@@ -16,6 +16,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useImagePicker } from "../../hooks/useImagePicker";
 import { uploadService } from "../../services/uploadService";
+import { admobService } from "../../services/admobService";
 import {
   createProductAsync,
   updateProductAsync,
@@ -205,17 +206,36 @@ export default function AddProductScreen() {
         finalImageUrl = uploadRes.data.imageUrl;
       } catch (error: any) {
         console.error("Image upload failed:", error);
+        toast.error("Failed to upload image. Please try again.");
+        return;
       } finally {
         setIsUploading(false);
       }
     }
 
-    try {
-      if (isEditMode && id) {
-        await dispatch(
-          updateProductAsync({
-            id,
-            data: {
+    const saveProductLogic = async () => {
+      try {
+        if (isEditMode && id) {
+          await dispatch(
+            updateProductAsync({
+              id,
+              data: {
+                name,
+                category,
+                expiryDate,
+                color: selectedColor,
+                imageUrl: finalImageUrl,
+                notes,
+                ingredients,
+                qty,
+                barcode,
+              },
+            }),
+          ).unwrap();
+          toast.success("Product updated successfully!");
+        } else {
+          await dispatch(
+            createProductAsync({
               name,
               category,
               expiryDate,
@@ -225,29 +245,22 @@ export default function AddProductScreen() {
               ingredients,
               qty,
               barcode,
-            },
-          }),
-        ).unwrap();
-        toast.success("Product updated successfully!");
-      } else {
-        await dispatch(
-          createProductAsync({
-            name,
-            category,
-            expiryDate,
-            color: selectedColor,
-            imageUrl: finalImageUrl,
-            notes,
-            ingredients,
-            qty,
-            barcode,
-          }),
-        ).unwrap();
-        toast.success("Product saved successfully!");
+            }),
+          ).unwrap();
+          toast.success("Product saved successfully!");
+        }
+        router.back();
+      } catch (error: any) {
+        toast.error(error || "Failed to save product.");
       }
-      router.back();
-    } catch (error: any) {
-      toast.error(error || "Failed to save product.");
+    };
+
+    // Show Interstitial Ad before saving, fallback to save immediately if ad not loaded/offline
+    try {
+      admobService.showInterstitialAd(saveProductLogic);
+    } catch (adError) {
+      console.warn("Failed to show AdMob Ad, saving immediately:", adError);
+      await saveProductLogic();
     }
   };
 
@@ -547,7 +560,7 @@ export default function AddProductScreen() {
                     {
                       backgroundColor: isDarkMode
                         ? "rgba(255,255,255,0.05)"
-                        : "#F1F5F9",
+                        : "#EFF7F2",
                     },
                   ]}
                 >
@@ -676,17 +689,23 @@ export default function AddProductScreen() {
                 >
                   Ingredients
                 </Text>
-                <View style={[styles.inputWrapper, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "#F1F5F9", minHeight: 80 }]}>
-                  <Text style={[styles.input, { color: ingredients ? theme.colors.text : "#94A3B8", paddingVertical: 10 }]}>
-                    {ingredients ? ingredients : "No ingredients found"}
-                  </Text>
+                <View style={[styles.inputWrapper, { minHeight: 80 }]}>
+                  <TextInput
+                    style={[styles.input, { paddingVertical: 12, height: '100%', textAlignVertical: 'center' }]}
+                    placeholder="Enter ingredients (comma separated)"
+                    placeholderTextColor="#94A3B8"
+                    value={ingredients}
+                    onChangeText={setIngredients}
+                    multiline
+                    numberOfLines={4}
+                  />
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
                 <Text
                   style={[
-                    styles.label,
+                    styles.quantityLabel,
                     isDarkMode && { color: theme.colors.textSecondary },
                   ]}
                 >

@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { api } from "./api";
 import { CONFIG } from "./config";
+import axios from "axios";
 
 export interface UploadResponse {
   success: boolean;
@@ -44,38 +45,25 @@ export const uploadService = {
 
       console.log("📸 [UploadService] Sending request to:", uploadUrl);
 
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        body: formData,
+      const response = await axios.post<UploadResponse>(uploadUrl, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
-          // Do NOT set Content-Type for FormData
+          "Content-Type": "multipart/form-data",
         },
       });
 
       console.log("📸 [UploadService] Response status:", response.status);
+      console.log("📸 [UploadService] Response data:", response.data);
 
-      const responseText = await response.text();
-      console.log("📸 [UploadService] Raw response:", responseText);
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
+      if (!response.data || !response.data.success) {
         throw new Error(
-          `Invalid server response: ${responseText.substring(0, 100)}`,
-        );
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || `Upload failed with status ${response.status}`,
+          response.data?.message || `Upload failed with status ${response.status}`,
         );
       }
 
       console.log("📸 [UploadService] Upload successful!");
-      return data;
+      return response.data;
     } catch (error: any) {
       console.error("❌ [UploadService] Error:", error.message);
       throw error;

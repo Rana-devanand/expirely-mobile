@@ -20,8 +20,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import axios from "axios";
-import { CONFIG } from "../../services/config";
+import { api } from "../../services/api";
 import { getStyles } from "./styles";
 
 interface Meal {
@@ -36,6 +35,11 @@ interface MealPlan {
   dinner: Meal;
   snack: { name: string; description: string };
 }
+
+type MealPlanResponse = {
+  success: boolean;
+  data: MealPlan;
+};
 
 export default function MealPlannerScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -59,12 +63,12 @@ export default function MealPlannerScreen() {
         .map((p) => p.name)
         .join(",");
 
-      const response = await axios.get(`${CONFIG.API_URL}/ai/meal-plan`, {
-        params: { products: activeItems },
-      });
+      const response = await api.get<MealPlanResponse>(
+        `/ai/meal-plan?products=${encodeURIComponent(activeItems)}`,
+      );
 
-      if (response.data.success) {
-        setMealPlan(response.data.data);
+      if (response.success) {
+        setMealPlan(response.data);
       }
     } catch (error) {
       console.error("Meal Plan Error:", error);

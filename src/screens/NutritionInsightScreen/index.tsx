@@ -14,21 +14,33 @@ import {
   ChevronLeft,
   Search,
   Apple,
-  Zap,
+  HeartPulse,
   ShieldCheck,
-  Timer,
+  Sparkles,
+  RefreshCw,
+  ChevronRight,
+  Salad,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { getStyles } from "./styles";
-import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { CONFIG } from "../../services/config";
+import { api } from "../../services/api";
 import { Product } from "../../types";
+
+type HealthInsightResponse = {
+  success: boolean;
+  data: {
+    benefits: string[];
+    consumptionTip: string;
+    healthScore: number;
+    product: string;
+  };
+};
 
 export default function NutritionInsightScreen() {
   const { theme, isDarkMode } = useAppTheme();
-  const styles = getStyles(theme, isDarkMode) as any;
+  const styles = getStyles(theme, isDarkMode);
   const router = useRouter();
   const products = useSelector((state: RootState) => state.products.products);
 
@@ -43,18 +55,22 @@ export default function NutritionInsightScreen() {
   } | null>(null);
 
   const filteredProducts = products
-    .filter((p: Product) => p.name.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 5);
+    .filter((product: Product) =>
+      product.name.toLowerCase().includes(search.toLowerCase()),
+    )
+    .slice(0, 8);
 
   const fetchInsight = async (product: Product) => {
     setLoading(true);
     setInsight(null);
     try {
-      const response = await axios.get(`${CONFIG.API_URL}/ai/health-insight`, {
-        params: { productName: product.name, category: product.category },
-      });
-      if (response.data.success) {
-        setInsight(response.data.data);
+      const response = await api.get<HealthInsightResponse>(
+        `/ai/health-insight?productName=${encodeURIComponent(
+          product.name,
+        )}&category=${encodeURIComponent(product.category)}`,
+      );
+      if (response.success) {
+        setInsight(response.data);
       }
     } catch (error) {
       console.error("Error fetching health insight:", error);
@@ -75,6 +91,12 @@ export default function NutritionInsightScreen() {
     return "#EF4444";
   };
 
+  const getScoreLabel = (score: number) => {
+    if (score >= 8) return "Strong choice";
+    if (score >= 5) return "Balanced choice";
+    return "Use with care";
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -84,7 +106,10 @@ export default function NutritionInsightScreen() {
         >
           <ChevronLeft size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Nutrition Insight</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.eyebrow}>Health assistant</Text>
+          <Text style={styles.title}>Nutrition Insight</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -93,71 +118,95 @@ export default function NutritionInsightScreen() {
       >
         {!selectedProduct ? (
           <>
+            <View style={styles.heroPanel}>
+              <View style={styles.heroIcon}>
+                <HeartPulse size={28} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.heroTitle}>Understand what you eat</Text>
+              <Text style={styles.heroSubtitle}>
+                Select a product to get an AI health score, key benefits, and a
+                simple consumption suggestion.
+              </Text>
+              <View style={styles.heroStats}>
+                <View style={styles.heroStat}>
+                  <ShieldCheck size={15} color={theme.colors.success} />
+                  <Text style={styles.heroStatText}>Health score</Text>
+                </View>
+                <View style={styles.heroStat}>
+                  <Salad size={15} color="#10B981" />
+                  <Text style={styles.heroStatText}>Food tips</Text>
+                </View>
+              </View>
+            </View>
+
             <View style={styles.searchContainer}>
               <Search size={20} color={theme.colors.textSecondary} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search a product for health check..."
+                placeholder="Search product..."
                 placeholderTextColor={theme.colors.textSecondary}
                 value={search}
                 onChangeText={setSearch}
               />
             </View>
 
-            <Text style={styles.sectionTitle}>Select from your stock</Text>
-            {filteredProducts.map((p: Product) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Choose Item</Text>
+              <Text style={styles.sectionSubtitle}>
+                {filteredProducts.length} shown
+              </Text>
+            </View>
+
+            {filteredProducts.map((product: Product) => (
               <TouchableOpacity
-                key={p.id}
+                key={product.id}
                 style={styles.productItem}
-                onPress={() => handleProductSelect(p)}
+                onPress={() => handleProductSelect(product)}
+                activeOpacity={0.78}
               >
-                <View
-                  style={[
-                    styles.productIcon,
-                    { backgroundColor: theme.colors.primary + "15" },
-                  ]}
-                >
-                  {p.imageUrl ? (
-                    <RNImage
-                      source={{ uri: p.imageUrl }}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: 10,
-                      }}
-                    />
-                  ) : (
-                    <Apple size={24} color={theme.colors.primary} />
-                  )}
+                <View style={styles.productLeft}>
+                  <View style={styles.productIcon}>
+                    {product.imageUrl ? (
+                      <RNImage
+                        source={{ uri: product.imageUrl }}
+                        style={styles.productImage}
+                      />
+                    ) : (
+                      <Apple size={24} color={theme.colors.primary} />
+                    )}
+                  </View>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName} numberOfLines={1}>
+                      {product.name}
+                    </Text>
+                    <Text style={styles.productMeta}>
+                      {product.category}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.productName}>{p.name}</Text>
+                <View style={styles.chevronWrap}>
+                  <ChevronRight size={18} color={theme.colors.textSecondary} />
+                </View>
               </TouchableOpacity>
             ))}
           </>
         ) : (
           <View>
             <TouchableOpacity
-              style={{
-                marginBottom: 20,
-                flexDirection: "row",
-                alignItems: "center",
-              }}
+              style={styles.changeButton}
               onPress={() => {
                 setSelectedProduct(null);
                 setInsight(null);
               }}
             >
-              <Text style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                ← Select another item
-              </Text>
+              <RefreshCw size={16} color={theme.colors.primary} />
+              <Text style={styles.changeButtonText}>Select another item</Text>
             </TouchableOpacity>
 
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text
-                  style={{ marginTop: 16, color: theme.colors.textSecondary }}
-                >
+                <Text style={styles.loadingText}>
                   AI is analyzing nutrition data...
                 </Text>
               </View>
@@ -167,54 +216,61 @@ export default function NutritionInsightScreen() {
                   <View style={styles.scoreCard}>
                     <View
                       style={[
-                        styles.scoreCircle,
+                        styles.scoreRing,
+                        { borderColor: getScoreColor(insight.healthScore) },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.scoreValue,
+                          { color: getScoreColor(insight.healthScore) },
+                        ]}
+                      >
+                        {insight.healthScore}
+                      </Text>
+                      <Text style={styles.scoreMax}>/10</Text>
+                    </View>
+                    <Text style={styles.scoreProduct}>
+                      {selectedProduct.name}
+                    </Text>
+                    <View
+                      style={[
+                        styles.scoreBadge,
                         {
-                          borderColor:
-                            getScoreColor(insight.healthScore) + "20",
+                          backgroundColor:
+                            getScoreColor(insight.healthScore) + "14",
                         },
                       ]}
                     >
-                      <View
+                      <Text
                         style={[
-                          styles.scoreCircle,
-                          {
-                            width: 100,
-                            height: 100,
-                            borderWidth: 0,
-                            backgroundColor:
-                              getScoreColor(insight.healthScore) + "10",
-                            marginBottom: 0,
-                          },
+                          styles.scoreBadgeText,
+                          { color: getScoreColor(insight.healthScore) },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.scoreValue,
-                            { color: getScoreColor(insight.healthScore) },
-                          ]}
-                        >
-                          {insight.healthScore}/10
-                        </Text>
-                      </View>
+                        {getScoreLabel(insight.healthScore)}
+                      </Text>
                     </View>
-                    <Text style={styles.title}>{selectedProduct.name}</Text>
-                    <Text style={styles.scoreLabel}>Overall Health Score</Text>
                   </View>
 
                   <Text style={styles.sectionTitle}>Key Benefits</Text>
                   <View style={styles.insightCard}>
-                    {insight.benefits.map((benefit, i) => (
-                      <View key={i} style={styles.benefitItem}>
+                    {insight.benefits.map((benefit, index) => (
+                      <View key={index} style={styles.benefitItem}>
                         <View
                           style={[
-                            styles.benefitDot,
+                            styles.benefitIcon,
                             {
-                              backgroundColor: getScoreColor(
-                                insight.healthScore,
-                              ),
+                              backgroundColor:
+                                getScoreColor(insight.healthScore) + "14",
                             },
                           ]}
-                        />
+                        >
+                          <Sparkles
+                            size={15}
+                            color={getScoreColor(insight.healthScore)}
+                          />
+                        </View>
                         <Text style={styles.benefitText}>{benefit}</Text>
                       </View>
                     ))}

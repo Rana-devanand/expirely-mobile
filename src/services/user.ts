@@ -41,4 +41,10 @@ export const userService = {
     api.post<{ success: boolean; message: string }>("/users/fcm-token", {
       fcmToken,
     }),
+
+  forgotPassword: (email: string) =>
+    api.post<{ success: boolean; message: string }>("/users/forgot-password", { email }),
+
+  resetPassword: (data: any) =>
+    api.post<{ success: boolean; message: string }>("/users/reset-password", data),
 };

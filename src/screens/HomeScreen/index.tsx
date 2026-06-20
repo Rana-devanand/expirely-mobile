@@ -2,6 +2,7 @@ import React from "react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
+  DimensionValue,
   View,
   Text,
   ScrollView,
@@ -20,22 +21,21 @@ import {
 } from "../../store/notificationSlice";
 import { Product } from "../../types";
 import { useAppTheme } from "../../hooks/useAppTheme";
-import { getTimeBasedGreeting } from "../../utils/dateHelpers";
+import { getTimeBasedGreeting, formatRemainingTime } from "../../utils/dateHelpers";
 import {
-  Search,
   Bell,
   Zap,
-  CheckCircle2,
-  XCircle,
   ChevronRight,
   Scan,
   X,
   Plus,
-  Info,
+  Calendar,
   AlertTriangle,
   RefreshCcw,
   Layers,
-  CalendarX,
+  Timer,
+  Apple,
+  Trash2,
 } from "lucide-react-native";
 import { Modal, ActivityIndicator, RefreshControl } from "react-native";
 import { getStyles } from "./styles";
@@ -58,6 +58,9 @@ export default function HomeScreen() {
   const styles = getStyles(theme, isDarkMode);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [allProductsFilter, setAllProductsFilter] = React.useState<
+    "all" | "good" | "warning" | "expired"
+  >("all");
 
   React.useEffect(() => {
     dispatch(fetchProductsAsync());
@@ -75,7 +78,6 @@ export default function HomeScreen() {
 
   const expiringSoon = activeProducts.filter((p) => p.status === "warning");
   const recentlyAdded = activeProducts.slice(-3).reverse();
-  const allProducts = activeProducts.slice(0, 5); // Display first 5 for "All Products" section
 
   const expiredCount = activeProducts.filter(
     (p) => p.status === "expired",
@@ -86,6 +88,21 @@ export default function HomeScreen() {
   const goodCount = activeProducts.filter((p) => p.status === "good").length;
 
   const totalCategories = new Set(activeProducts.map((p) => p.category)).size;
+  const nextExpiry = [...activeProducts]
+    .filter((p) => p.expiryDate)
+    .sort((a, b) => dayjs(a.expiryDate).diff(dayjs(b.expiryDate)))[0];
+  const allProductFilterOptions = [
+    { key: "all", label: "All", count: activeProducts.length },
+    { key: "good", label: "Fresh", count: goodCount },
+    { key: "warning", label: "Soon", count: warningCount },
+    { key: "expired", label: "Expired", count: expiredCount },
+  ] as const;
+  const allProducts =
+    allProductsFilter === "all"
+      ? activeProducts.slice(0, 5)
+      : activeProducts
+        .filter((product) => product.status === allProductsFilter)
+        .slice(0, 5);
 
   const renderDescription = (desc: string) => {
     // Basic keyword highlighting logic
@@ -183,81 +200,173 @@ export default function HomeScreen() {
         style={[styles.daysBadge, { backgroundColor: theme.colors.expiringBg }]}
       >
         <Text style={[styles.daysText, { color: theme.colors.error }]}>
-          {item.daysLeft < 0 ? "Expired" : `${item.daysLeft}d left`}
+          {formatRemainingTime(item.expiryDate, false)}
         </Text>
       </View>
     </TouchableOpacity>
   );
 
-  const renderProductItem = (item: Product) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.itemCard}
-      activeOpacity={0.8}
-      onPress={() =>
-        router.push({
-          pathname: "/product/[id]",
-          params: { id: item.id },
-        })
-      }
-    >
-      <View
+  const renderProductItem = (
+    item: Product,
+    variant: "default" | "recent" = "default",
+  ) => {
+    const statusColor =
+      item.status === "expired"
+        ? theme.colors.error
+        : item.status === "warning"
+          ? theme.colors.warning
+          : theme.colors.success;
+    const statusBg =
+      item.status === "expired"
+        ? theme.colors.expiredBg
+        : item.status === "warning"
+          ? theme.colors.expiringBg
+          : theme.colors.freshBg;
+    const createdLabel = item.created_at
+      ? dayjs(item.created_at).fromNow()
+      : "Recently tracked";
+    const progressWidth = `${Math.max(
+      8,
+      Math.min(100, ((item.daysLeft || 0) / 30) * 100),
+    )}%` as DimensionValue;
+
+    return (
+      <TouchableOpacity
+        key={item.id}
         style={[
-          styles.iconBg,
-          {
-            backgroundColor:
-              item.status === "expired"
-                ? theme.colors.expiredBg
-                : theme.colors.freshBg,
-          },
+          styles.itemCard,
+          variant === "recent" && styles.recentItemCard,
         ]}
+        activeOpacity={0.82}
+        onPress={() =>
+          router.push({
+            pathname: "/product/[id]",
+            params: { id: item.id },
+          })
+        }
       >
-        {item.imageUrl ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={{ width: "100%", height: "100%", borderRadius: 15 }}
-            resizeMode="cover"
-          />
-        ) : (
-          <Text style={{ fontSize: 24 }}>{getEmoji(item.category)}</Text>
-        )}
-      </View>
-      <View style={styles.info}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.category}>{item.category}</Text>
-      </View>
-      <View
-        style={[
-          styles.badge,
-          {
-            backgroundColor:
-              item.status === "expired"
-                ? theme.colors.expiredBg
-                : theme.colors.freshBg,
-          },
-        ]}
+        <View
+          style={[styles.itemStatusStrip, { backgroundColor: statusColor }]}
+        />
+        <View style={[styles.iconBg, { backgroundColor: statusBg }]}>
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.productThumb}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={{ fontSize: 24 }}>{getEmoji(item.category)}</Text>
+          )}
+        </View>
+
+        <View style={styles.info}>
+          <View style={styles.productTopRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {variant === "recent" && (
+              <Text style={styles.recentLabel} numberOfLines={1}>
+                {createdLabel}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.productMetaRow}>
+            <View style={styles.categoryPill}>
+              <Text style={styles.category} numberOfLines={1}>
+                {item.category}
+              </Text>
+            </View>
+            <View style={styles.dateMeta}>
+              <Calendar size={12} color={theme.colors.textSecondary} />
+              <Text style={styles.dateMetaText} numberOfLines={1}>
+                {dayjs(item.expiryDate).format("MMM D")}
+              </Text>
+            </View>
+            {(item.qty || 0) > 1 && (
+              <View style={styles.qtyPill}>
+                <Text style={styles.qtyPillText}>x{item.qty}</Text>
+              </View>
+            )}
+          </View>
+         
+        </View>
+
+        <View style={styles.rightMeta}>
+          <View style={[styles.badge, { backgroundColor: statusBg }]}>
+            <Text style={[styles.badgeText, { color: statusColor }]}>
+              {formatRemainingTime(item.expiryDate, true)}
+            </Text>
+          </View>
+          <View style={styles.rowChevron}>
+            <ChevronRight size={16} color={theme.colors.textSecondary} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderRecentProductCard = (item: Product) => {
+    const statusColor =
+      item.status === "expired"
+        ? theme.colors.error
+        : item.status === "warning"
+          ? theme.colors.warning
+          : theme.colors.success;
+    const statusBg =
+      item.status === "expired"
+        ? theme.colors.expiredBg
+        : item.status === "warning"
+          ? theme.colors.expiringBg
+          : theme.colors.freshBg;
+    const createdLabel = item.created_at
+      ? dayjs(item.created_at).fromNow()
+      : "New item";
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.recentProductCard}
+        activeOpacity={0.84}
+        onPress={() =>
+          router.push({
+            pathname: "/product/[id]",
+            params: { id: item.id },
+          })
+        }
       >
-        <Text
-          style={[
-            styles.badgeText,
-            {
-              color:
-                item.status === "expired"
-                  ? theme.colors.textSecondary
-                  : theme.colors.success,
-            },
-          ]}
-        >
-          {item.daysLeft < 0 ? "Expired" : `${item.daysLeft}d`}
+        <View style={[styles.recentImageWrap, { backgroundColor: statusBg }]}>
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.recentProductImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={{ fontSize: 34 }}>{getEmoji(item.category)}</Text>
+          )}
+          <View style={[styles.recentStatusDot, { backgroundColor: statusColor }]} />
+        </View>
+        <Text style={styles.recentCardName} numberOfLines={1}>
+          {item.name}
         </Text>
-      </View>
-      <ChevronRight
-        size={20}
-        color={theme.colors.border}
-        style={{ marginLeft: 8 }}
-      />
-    </TouchableOpacity>
-  );
+        <Text style={styles.recentCardCategory} numberOfLines={1}>
+          {item.category}
+        </Text>
+        <View style={styles.recentCardFooter}>
+          <Text style={styles.recentCardTime} numberOfLines={1}>
+            {createdLabel}
+          </Text>
+          <View style={[styles.recentExpiryBadge, { backgroundColor: statusBg }]}>
+            <Text style={[styles.recentExpiryText, { color: statusColor }]}>
+              {formatRemainingTime(item.expiryDate, true)}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -366,88 +475,85 @@ export default function HomeScreen() {
           </View>
         </Modal>
 
-        {/* Storage Overview Card */}
-        <View style={styles.inventoryBanner}>
-          <View style={styles.inventoryInfo}>
-            <Text style={styles.inventoryTitle}>Storage Overview</Text>
-            <Text style={styles.inventoryCount}>
-              {activeProducts.length}{" "}
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "600",
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                Items
+        {/* Dashboard Overview */}
+        <View style={styles.dashboardHero}>
+
+
+          <View style={styles.heroMainRow}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroLabel}>Dashboard</Text>
+              <Text style={styles.heroTitle}>
+                {activeProducts.length} active items
               </Text>
-              {"  "}
-              <Text style={{ fontSize: 24, color: theme.colors.border }}>
-                |
+              <Text style={styles.heroSubtitle}>
+                {totalCategories} {totalCategories === 1 ? "category" : "categories"} tracked
               </Text>
-              {"  "}
-              {totalCategories}{" "}
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "600",
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                Category
-              </Text>
-            </Text>
+            </View>
+            <View style={styles.heroIcon}>
+              <Layers size={30} color={theme.colors.primary} />
+            </View>
           </View>
-          <View style={styles.inventoryIconContainer}>
-            <Layers size={32} color={theme.colors.primary} />
+
+          <View style={styles.heroHealthRow}>
+            <View style={styles.heroHealthItem}>
+              <Text style={[styles.heroHealthValue, { color: theme.colors.success }]}>
+                {goodCount}
+              </Text>
+              <Text style={styles.heroHealthLabel}>Fresh</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroHealthItem}>
+              <Text style={[styles.heroHealthValue, { color: theme.colors.warning }]}>
+                {warningCount}
+              </Text>
+              <Text style={styles.heroHealthLabel}>Soon</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroHealthItem}>
+              <Text style={[styles.heroHealthValue, { color: theme.colors.error }]}>
+                {expiredCount}
+              </Text>
+              <Text style={styles.heroHealthLabel}>Expired</Text>
+            </View>
           </View>
         </View>
 
-        {/* Improved Stats Grid */}
-        <View style={styles.statsRow}>
-          <View
-            style={[
-              styles.statCard,
-              { backgroundColor: theme.colors.expiringBg },
-            ]}
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={styles.quickAction}
+            activeOpacity={0.8}
+            onPress={() => router.push("/addProduct")}
           >
-            <View style={styles.statIconContainer}>
-              <AlertTriangle size={24} color={theme.colors.warning} />
+            <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary + "18" }]}>
+              <Plus size={18} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.statNumber, { color: theme.colors.warning }]}>
-              {warningCount}
-            </Text>
-            <Text style={styles.statLabel}>Expiring</Text>
-          </View>
-
-          <View
-            style={[styles.statCard, { backgroundColor: theme.colors.freshBg }]}
+            <Text style={styles.quickActionText}>Add item</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickAction}
+            activeOpacity={0.8}
+            onPress={() => router.push("/scanner")}
           >
-            <View style={styles.statIconContainer}>
-              <CheckCircle2 size={24} color={theme.colors.success} />
+            <View style={[styles.quickActionIcon, { backgroundColor: "#EFF6FF" }]}>
+              <Scan size={18} color="#2563EB" />
             </View>
-            <Text style={[styles.statNumber, { color: theme.colors.success }]}>
-              {goodCount}
-            </Text>
-            <Text style={styles.statLabel}>Fresh</Text>
-          </View>
-
-          <View
-            style={[
-              styles.statCard,
-              { backgroundColor: theme.colors.expiredBg },
-            ]}
+            <Text style={styles.quickActionText}>Scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickAction}
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push({
+                pathname: "/product-list",
+                params: { type: "expiring", title: "Expiring Soon" },
+              })
+            }
           >
-            <View style={styles.statIconContainer}>
-              <CalendarX size={24} color={theme.colors.textSecondary} />
+            <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.expiringBg }]}>
+              <AlertTriangle size={18} color={theme.colors.warning} />
             </View>
-            <Text
-              style={[styles.statNumber, { color: theme.colors.textSecondary }]}
-            >
-              {expiredCount}
-            </Text>
-            <Text style={styles.statLabel}>Expired</Text>
-          </View>
+            <Text style={styles.quickActionText}>Review</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Conditionally Render Sections or Empty State */}
@@ -485,7 +591,7 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* Expiry Trends Graph with Real Data */}
-            <ExpiryTrendsGraph products={activeProducts} />
+            {/* <ExpiryTrendsGraph products={activeProducts} /> */}
 
             {/* Expiring Soon Section */}
             {expiringSoon.length > 0 && (
@@ -514,27 +620,16 @@ export default function HomeScreen() {
               </>
             )}
 
-            {/* All Products Section */}
-            <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>All Products</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/product-list",
-                    params: { type: "all", title: "All Products" },
-                  })
-                }
-              >
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.verticalList}>
-              {allProducts.map((item) => renderProductItem(item))}
-            </View>
-
             {/* Recently Added Section */}
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>Recently Added</Text>
+              <View style={styles.sectionTitleCluster}>
+                <Text style={styles.sectionTitle}>Recently Added</Text>
+                <View style={styles.sectionCountPill}>
+                  <Text style={styles.sectionCountText}>
+                    {recentlyAdded.length}
+                  </Text>
+                </View>
+              </View>
               <TouchableOpacity
                 onPress={() =>
                   router.push({
@@ -546,9 +641,96 @@ export default function HomeScreen() {
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.verticalList}>
-              {recentlyAdded.map((item) => renderProductItem(item))}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recentProductsRow}
+            >
+              {recentlyAdded.map((item) => renderRecentProductCard(item))}
+            </ScrollView>
+
+
+            {/* All Products Section */}
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionTitleCluster}>
+                <Text style={styles.sectionTitle}>All Products</Text>
+                <View style={styles.sectionCountPill}>
+                  <Text style={styles.sectionCountText}>
+                    {allProductFilterOptions.find(
+                      (option) => option.key === allProductsFilter,
+                    )?.count || 0}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/product-list",
+                    params: { type: "all", title: "All Products" },
+                  })
+                }
+              >
+                <Text style={styles.seeAll}>See all</Text>
+              </TouchableOpacity>
             </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.productFilterRow}
+            >
+              {allProductFilterOptions.map((option) => {
+                const isActive = allProductsFilter === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[
+                      styles.productFilterChip,
+                      isActive && styles.activeProductFilterChip,
+                    ]}
+                    activeOpacity={0.78}
+                    onPress={() => setAllProductsFilter(option.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.productFilterText,
+                        isActive && styles.activeProductFilterText,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <View
+                      style={[
+                        styles.filterCountBadge,
+                        isActive && styles.activeFilterCountBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterCountText,
+                          isActive && styles.activeFilterCountText,
+                        ]}
+                      >
+                        {option.count}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            {allProducts.length > 0 ? (
+              <View style={styles.verticalList}>
+                {allProducts.map((item) => renderProductItem(item))}
+              </View>
+            ) : (
+              <View style={styles.inlineEmptyState}>
+                <AlertTriangle size={20} color={theme.colors.textSecondary} />
+                <Text style={styles.inlineEmptyTitle}>No matching products</Text>
+                <Text style={styles.inlineEmptyText}>
+                  Try another filter or add more inventory items.
+                </Text>
+              </View>
+            )}
           </>
         )}
       </ScrollView>

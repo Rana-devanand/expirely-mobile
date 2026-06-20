@@ -28,6 +28,21 @@ const { width } = Dimensions.get("window");
 
 import { productService } from "../../services/productService";
 
+// Smart fallback tip based on live inventory stats
+function buildFallbackInsight(
+  stats: { good: number; warning: number; expired: number },
+  total: number
+): string {
+  if (total === 0) return "Add your first product to start tracking expiry dates!";
+  if (stats.expired > 0 && stats.warning > 0)
+    return `You have ${stats.expired} expired and ${stats.warning} expiring items. Clear expired stock and use the expiring ones soon!`;
+  if (stats.expired > 0)
+    return `${stats.expired} item${stats.expired > 1 ? "s have" : " has"} expired. Consider disposing them to keep your inventory clean.`;
+  if (stats.warning > 0)
+    return `${stats.warning} item${stats.warning > 1 ? "s are" : " is"} expiring soon — use ${stats.warning > 1 ? "them" : "it"} before the deadline to avoid waste!`;
+  return `All ${stats.good} item${stats.good > 1 ? "s are" : " is"} fresh. Great inventory management — keep it up! 🎉`;
+}
+
 export default function AnalyticsScreen() {
   const { theme, isDarkMode } = useAppTheme();
   const styles = getStyles(theme, isDarkMode);
@@ -112,19 +127,28 @@ export default function AnalyticsScreen() {
 
   useEffect(() => {
     const fetchInsight = async () => {
+      // Products not yet loaded from Redux — wait, don't show stale message
       if (totalItems === 0) {
-        setAiInsight("No items tracked yet. Add your first product to see insights!");
+        setAiInsight("");
         return;
       }
 
       try {
         setIsInsightLoading(true);
-        const response = await productService.getInventoryInsight();
-        if (response.success && response.data?.message) {
-          setAiInsight(response.data.message);
+        setAiInsight(""); // clear stale message before new fetch
+
+        // getInventoryInsight already unwraps to the inner data object
+        const data = await productService.getInventoryInsight();
+        if (data?.message) {
+          setAiInsight(data.message);
+        } else {
+          // Fallback based on live inventory state
+          setAiInsight(buildFallbackInsight(statusStats, totalItems));
         }
       } catch (error) {
         console.error("Failed to fetch AI insight:", error);
+        // Always show something sensible instead of stale "no items" text
+        setAiInsight(buildFallbackInsight(statusStats, totalItems));
       } finally {
         setIsInsightLoading(false);
       }
@@ -384,14 +408,15 @@ export default function AnalyticsScreen() {
 
         {/* Tip Banner */}
         <TouchableOpacity style={styles.tipBanner} activeOpacity={0.9}>
-          <View style={styles.gridIconBox}>
-            <Lightbulb size={24} color="#FFF" />
-          </View>
           <View style={styles.tipContent}>
             <Text style={styles.tipText}>
-              {isInsightLoading ? "AI is generating insight..." : (aiInsight || (statusStats.warning > 0
-                ? `You have ${statusStats.warning} items expiring soon. Try to use them before they go to waste!`
-                : "Great job! All your items are fresh. Keep tracking to reduce food waste."))}
+              {isInsightLoading
+                ? "✨ AI is analysing your inventory…"
+                : aiInsight
+                ? aiInsight
+                : totalItems === 0
+                ? "Add your first product to start seeing AI-powered insights!"
+                : buildFallbackInsight(statusStats, totalItems)}
             </Text>
           </View>
         </TouchableOpacity>

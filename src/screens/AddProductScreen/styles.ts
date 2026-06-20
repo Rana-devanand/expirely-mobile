@@ -36,10 +36,10 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     uploadContainer: {
       height: 200,
       borderWidth: 1,
-      borderColor: "#CBD5E1",
+      borderColor: theme.colors.border,
       borderStyle: "dashed",
       borderRadius: 32,
-      backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "#F8FAFC",
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : theme.colors.card,
       justifyContent: "center",
       alignItems: "center",
       marginBottom: 30,
@@ -83,7 +83,9 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     inputWrapper: {
       height: 56,
-      backgroundColor: isDarkMode ? "#151C2C" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       borderRadius: 16,
       flexDirection: "row",
       alignItems: "center",
@@ -115,7 +117,9 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     submitButton: {
       height: 60,
-      backgroundColor: "#F1F5F9",
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       borderRadius: 20,
       justifyContent: "center",
       alignItems: "center",
@@ -143,7 +147,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     categoryModalContainer: {
       width: "100%",
-      backgroundColor: isDarkMode ? "#1E293B" : "#FFFFFF",
+      backgroundColor: isDarkMode ? "#1E293B" : theme.colors.card,
       borderRadius: 24,
       padding: 24,
     },
@@ -155,7 +159,9 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     modalInput: {
       height: 56,
-      backgroundColor: isDarkMode ? "#151C2C" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       borderRadius: 16,
       paddingHorizontal: 16,
       fontSize: 16,
@@ -174,7 +180,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       alignItems: "center",
     },
     modalCancelButton: {
-      backgroundColor: isDarkMode ? "#151C2C" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
     },
     modalSaveButton: {
       backgroundColor: theme.colors.primary,
@@ -185,7 +191,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     // Animated Dropdown Styles
     dropdownContainer: {
-      backgroundColor: isDarkMode ? "#1E293B" : "#FFFFFF",
+      backgroundColor: isDarkMode ? "#1E293B" : theme.colors.card,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -223,7 +229,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     calendarModal: {
       width: "100%",
       maxWidth: 350,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: theme.colors.card,
       borderRadius: 24,
       padding: 20,
       elevation: 10,
@@ -240,7 +246,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     categoryItem: {
       width: "45%",
-      backgroundColor: "#F1F5F9",
+      backgroundColor: "#EFF7F2",
       padding: 12,
       borderRadius: 12,
       alignItems: "center",
@@ -248,7 +254,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     // Image Source Modal Styles
     sourceModalContainer: {
       width: "100%",
-      backgroundColor: isDarkMode ? "#1E293B" : "#FFFFFF",
+      backgroundColor: isDarkMode ? "#1E293B" : theme.colors.card,
       borderRadius: 24,
       padding: 24,
       gap: 16,
@@ -257,7 +263,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       flexDirection: "row",
       alignItems: "center",
       padding: 16,
-      backgroundColor: isDarkMode ? "#151C2C" : "#F8FAFC",
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
       borderRadius: 16,
       gap: 12,
     },
@@ -276,11 +282,14 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       gap: 20,
       marginTop: 4,
     },
+    quantityLabel:{
+      marginTop: 20,
+    },
     qtyButton: {
       width: 48,
       height: 48,
       borderRadius: 14,
-      backgroundColor: isDarkMode ? "#151C2C" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
       justifyContent: "center",
       alignItems: "center",
       borderWidth: 1,

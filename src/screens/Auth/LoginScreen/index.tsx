@@ -35,12 +35,14 @@ export default function LoginScreen() {
   const styles = getStyles(theme, isDarkMode);
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const { loading } = useSelector((state: RootState) => state.auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
     dispatch(loginStart());
     try {
       const googleResult = await googleSignInService.signOutAndSignIn();
@@ -49,15 +51,22 @@ export default function LoginScreen() {
       if (idToken) {
         dispatch(googleLogin(idToken))
           .unwrap()
-          .then(() => router.replace("/(tabs)"))
+          .then(() => {
+            setGoogleLoading(false);
+            router.replace("/(tabs)");
+          })
           .catch((error: any) => {
             console.error("Google login error", error);
             const errorMessage = error.message || "Google sign-in failed";
             dispatch(loginFailure(errorMessage));
             toast.error(errorMessage, "Google Login Failed");
+            setGoogleLoading(false);
           });
+      } else {
+        setGoogleLoading(false);
       }
     } catch (error: any) {
+      setGoogleLoading(false);
       if (error.message === "SIGN_IN_CANCELLED") {
         dispatch(loginFailure("Sign-in cancelled"));
         return;
@@ -74,6 +83,7 @@ export default function LoginScreen() {
       return;
     }
 
+    setEmailLoading(true);
     dispatch(loginStart());
 
     try {
@@ -100,11 +110,13 @@ export default function LoginScreen() {
         );
         // Register FCM token after email login (non-blocking)
         dispatch(registerFcmToken());
+        setEmailLoading(false);
         router.replace("/(tabs)");
       } else {
         throw new Error(response.message || "Login failed");
       }
     } catch (error: any) {
+      setEmailLoading(false);
       const errorMessage = error.message || "Invalid email or password";
       dispatch(loginFailure(errorMessage));
       toast.error(errorMessage, "Login Failed");
@@ -164,16 +176,20 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => router.push("/forgot-password")}
+            disabled={emailLoading || googleLoading}
+          >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.loginButton, loading && { opacity: 0.7 }]}
+            style={[styles.loginButton, emailLoading && { opacity: 0.7 }]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={emailLoading || googleLoading}
           >
-            {loading ? (
+            {emailLoading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
               <Text style={styles.loginButtonText}>Sign In</Text>
@@ -192,9 +208,9 @@ export default function LoginScreen() {
             style={styles.googleButton}
             activeOpacity={0.8}
             onPress={handleGoogleSignIn}
-            disabled={loading}
+            disabled={emailLoading || googleLoading}
           >
-            {loading ? (
+            {googleLoading ? (
               <ActivityIndicator color={theme.colors.primary} />
             ) : (
               <>
@@ -215,9 +231,9 @@ export default function LoginScreen() {
           <Text style={styles.footerText}>Don't have an account?</Text>
           <TouchableOpacity
             onPress={() => router.push("/signup")}
-            disabled={loading}
+            disabled={emailLoading || googleLoading}
           >
-            <Text style={[styles.signUpLink, loading && { opacity: 0.5 }]}>
+            <Text style={[styles.signUpLink, (emailLoading || googleLoading) && { opacity: 0.5 }]}>
               Sign Up
             </Text>
           </TouchableOpacity>

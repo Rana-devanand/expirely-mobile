@@ -7,8 +7,10 @@ import { ExpiryNotificationService } from "../services/ExpiryNotificationService
 const calculateStatus = (
   expiryDate: string,
 ): "good" | "warning" | "expired" => {
-  const daysLeft = dayjs(expiryDate).diff(dayjs(), "day");
-  if (daysLeft < 0) return "expired";
+  const now = dayjs();
+  const expiry = dayjs(expiryDate).endOf("day");
+  if (expiry.isBefore(now)) return "expired";
+  const daysLeft = expiry.diff(now, "day");
   if (daysLeft <= 3) return "warning";
   return "good";
 };
@@ -26,7 +28,12 @@ export const fetchProductsAsync = createAsyncThunk(
     try {
       const products = await productService.getAllProducts();
       const processedProducts = products.map((p) => {
-        const daysLeft = dayjs(p.expiryDate).diff(dayjs(), "day");
+        const now = dayjs();
+        const expiry = dayjs(p.expiryDate).endOf("day");
+        let daysLeft = expiry.diff(now, "day");
+        if (expiry.isBefore(now)) {
+          daysLeft = -1;
+        }
         return {
           ...p,
           daysLeft,
@@ -47,7 +54,12 @@ export const createProductAsync = createAsyncThunk(
   async (productData: CreateProductData, { rejectWithValue }) => {
     try {
       const newProduct = await productService.createProduct(productData);
-      const daysLeft = dayjs(newProduct.expiryDate).diff(dayjs(), "day");
+      const now = dayjs();
+      const expiry = dayjs(newProduct.expiryDate).endOf("day");
+      let daysLeft = expiry.diff(now, "day");
+      if (expiry.isBefore(now)) {
+        daysLeft = -1;
+      }
       const status = calculateStatus(newProduct.expiryDate);
 
       const result = {
@@ -75,7 +87,12 @@ export const updateProductAsync = createAsyncThunk(
   ) => {
     try {
       const updatedProduct = await productService.updateProduct(id, data);
-      const daysLeft = dayjs(updatedProduct.expiryDate).diff(dayjs(), "day");
+      const now = dayjs();
+      const expiry = dayjs(updatedProduct.expiryDate).endOf("day");
+      let daysLeft = expiry.diff(now, "day");
+      if (expiry.isBefore(now)) {
+        daysLeft = -1;
+      }
       const status = calculateStatus(updatedProduct.expiryDate);
 
       const result = {

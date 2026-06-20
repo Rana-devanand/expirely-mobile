@@ -190,7 +190,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       width: 56,
       height: 56,
       borderRadius: 12,
-      backgroundColor: isDarkMode ? "#1A2234" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#1A2234" : "#EFF7F2",
       justifyContent: "center",
       alignItems: "center",
       marginRight: 12,

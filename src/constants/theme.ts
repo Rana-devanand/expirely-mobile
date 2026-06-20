@@ -1,19 +1,19 @@
 export const LIGHT_THEME = {
   colors: {
-    background: "#F8FAFC",
-    card: "#FFFFFF",
+    background: "#F4FBF7",
+    card: "#FDFEFC",
     primary: "#45D1A0", // FreshTrack matching teal
     secondary: "#6366F1",
     text: "#1E293B",
     textSecondary: "#64748B",
-    border: "#E2E8F0",
+    border: "#DDEBE4",
     success: "#10B981",
     warning: "#F59E0B",
     error: "#EF4444",
-    glow: "rgba(69, 209, 160, 0.2)",
+    glow: "rgba(69, 209, 160, 0.18)",
     expiringBg: "#FFF1F2",
     freshBg: "#ECFDF5",
-    expiredBg: "#F1F5F9",
+    expiredBg: "#EEF6F1",
   },
   spacing: {
     xs: 4,

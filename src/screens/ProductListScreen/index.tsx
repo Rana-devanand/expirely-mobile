@@ -24,6 +24,7 @@ import {
   ChevronRight,
 } from "lucide-react-native";
 import { getStyles } from "./styles";
+import { formatRemainingTime } from "../../utils/dateHelpers";
 
 export default function ProductListScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -135,7 +136,7 @@ export default function ProductListScreen() {
             },
           ]}
         >
-          {item.daysLeft < 0 ? "Expired" : `${item.daysLeft}d`}
+          {formatRemainingTime(item.expiryDate, true)}
         </Text>
       </View>
       <ChevronRight

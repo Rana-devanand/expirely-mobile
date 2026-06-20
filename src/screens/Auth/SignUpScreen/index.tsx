@@ -31,13 +31,13 @@ export default function SignUpScreen() {
   const styles = getStyles(theme, isDarkMode);
   const router = useRouter();
   const dispatch = useDispatch();
-  const { loading } = useSelector((state: RootState) => state.auth);
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [signUpLoading, setSignUpLoading] = useState(false);
 
   const handleSignUp = async () => {
     if (!username || !email || !password || !confirmPassword) {
@@ -50,6 +50,7 @@ export default function SignUpScreen() {
       return;
     }
 
+    setSignUpLoading(true);
     dispatch(signUpStart());
 
     try {
@@ -70,11 +71,13 @@ export default function SignUpScreen() {
             refreshToken: response.data.refreshToken,
           }),
         );
+        setSignUpLoading(false);
         router.replace("/(tabs)");
       } else {
         throw new Error(response.message || "Signup failed");
       }
     } catch (error: any) {
+      setSignUpLoading(false);
       const errorMessage =
         error.message || "Something went wrong during signup";
       dispatch(signUpFailure(errorMessage));
@@ -167,11 +170,11 @@ export default function SignUpScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.signUpButton, loading && { opacity: 0.7 }]}
+            style={[styles.signUpButton, signUpLoading && { opacity: 0.7 }]}
             onPress={handleSignUp}
-            disabled={loading}
+            disabled={signUpLoading}
           >
-            {loading ? (
+            {signUpLoading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
               <Text style={styles.signUpButtonText}>Sign Up</Text>
@@ -186,7 +189,7 @@ export default function SignUpScreen() {
         </View>
 
         <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.googleButton} activeOpacity={0.8} disabled={signUpLoading}>
             <Image
               source={require("./google-icon.png")}
               style={styles.googleIcon}
@@ -206,9 +209,9 @@ export default function SignUpScreen() {
           <Text style={styles.footerText}>Already have an account?</Text>
           <TouchableOpacity
             onPress={() => router.push("/login")}
-            disabled={loading}
+            disabled={signUpLoading}
           >
-            <Text style={[styles.loginLink, loading && { opacity: 0.5 }]}>
+            <Text style={[styles.loginLink, signUpLoading && { opacity: 0.5 }]}>
               Log In
             </Text>
           </TouchableOpacity>

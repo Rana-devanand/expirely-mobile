@@ -5,13 +5,14 @@ import { Product } from "../types";
 import { Calendar, Tag, Trash2 } from "lucide-react-native";
 import { useDispatch } from "react-redux";
 import { removeProduct } from "../store/productSlice";
+import { formatRemainingTime } from "../utils/dateHelpers";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { theme } = useAppTheme();
+  const { theme, isDarkMode } = useAppTheme();
   const dispatch = useDispatch();
 
   const isWarning = product.status === "warning";
@@ -23,7 +24,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       ? theme.colors.warning
       : theme.colors.success;
 
-  const styles = getStyles(theme, statusColor, isWarning);
+  const styles = getStyles(theme, statusColor, isDarkMode);
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.7}>
@@ -47,7 +48,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <View style={styles.statusRow}>
           <View style={[styles.badge, { backgroundColor: statusColor + "20" }]}>
             <Text style={[styles.badgeText, { color: statusColor }]}>
-              {isExpired ? "Expired" : `${product.daysLeft} days left`}
+              {formatRemainingTime(product.expiryDate, false)}
             </Text>
           </View>
           <View style={styles.dateRow}>
@@ -73,7 +74,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   );
 }
 
-const getStyles = (theme: any, statusColor: string, isWarning: boolean) =>
+const getStyles = (
+  theme: any,
+  statusColor: string,
+  isDarkMode: boolean,
+) =>
   StyleSheet.create({
     card: {
       backgroundColor: theme.colors.card,
@@ -84,6 +89,11 @@ const getStyles = (theme: any, statusColor: string, isWarning: boolean) =>
       borderColor: theme.colors.border,
       position: "relative",
       overflow: "hidden",
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDarkMode ? 0 : 0.05,
+      shadowRadius: 12,
+      elevation: isDarkMode ? 0 : 2,
     },
     header: {
       flexDirection: "row",
@@ -94,7 +104,7 @@ const getStyles = (theme: any, statusColor: string, isWarning: boolean) =>
       width: 40,
       height: 40,
       borderRadius: theme.borderRadius.sm,
-      backgroundColor: "rgba(69, 209, 160, 0.1)",
+      backgroundColor: theme.colors.primary + "14",
       justifyContent: "center",
       alignItems: "center",
       marginRight: theme.spacing.md,

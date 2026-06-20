@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -16,18 +16,17 @@ import {
 } from "react-native-tab-view";
 import {
   Home,
-  BarChart3,
   Package,
   User,
   Plus,
   Sparkles,
+  Scan,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "../../src/hooks/useAppTheme";
 
 // Import screens
 import HomeScreen from "./index";
-import AnalyticsScreen from "./analytics";
 import InventoryScreen from "./inventory";
 import ProfileScreen from "./profile";
 import AISmartHubScreen from "./aihub";
@@ -36,7 +35,6 @@ const renderScene = SceneMap({
   home: HomeScreen,
   inventory: InventoryScreen,
   aihub: AISmartHubScreen,
-  stats: AnalyticsScreen,
   profile: ProfileScreen,
 });
 
@@ -51,11 +49,58 @@ export default function TabLayout() {
       { key: "home", title: "Home", icon: Home },
       { key: "inventory", title: "Stock", icon: Package },
       { key: "aihub", title: "AI Hub", icon: Sparkles },
-      { key: "stats", title: "Stats", icon: BarChart3 },
       { key: "profile", title: "Me", icon: User },
     ],
     [],
   );
+
+  const [isExpanded, setIsExpanded] = useState(false);
+  const animation = useRef(new Animated.Value(0)).current;
+
+  const toggleMenu = () => {
+    const toValue = isExpanded ? 0 : 1;
+    if (toValue === 1) {
+      setIsExpanded(true);
+      Animated.spring(animation, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(animation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsExpanded(false);
+      });
+    }
+  };
+
+  const navigateTo = (route: any) => {
+    Animated.timing(animation, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsExpanded(false);
+      router.push(route);
+    });
+  };
+
+  const addTranslateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -70],
+  });
+  const scanTranslateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -135],
+  });
+  const rotation = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "45deg"],
+  });
 
   const renderTabBar = (
     props: SceneRendererProps & { navigationState: NavigationState<any> },
@@ -68,196 +113,190 @@ export default function TabLayout() {
             {
               backgroundColor: isDarkMode
                 ? "rgba(30, 30, 30, 0.9)"
-                : "rgba(255, 255, 255, 0.95)",
+                : "rgba(253, 254, 252, 0.95)",
               borderColor: theme.colors.border,
             },
           ]}
         >
-          {/* Tab 0: Home */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => setIndex(0)}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                index === 0 && { backgroundColor: theme.colors.primary + "15" },
-              ]}
-            >
-              <Home
-                size={20}
-                color={
-                  index === 0
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-                strokeWidth={index === 0 ? 2.5 : 2}
-              />
-            </View>
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color:
-                    index === 0
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              Home
-            </Text>
-          </TouchableOpacity>
+          {props.navigationState.routes.map((route, routeIndex) => {
+            const Icon = route.icon;
+            const isActive = index === routeIndex;
 
-          {/* Tab 1: Stock */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => setIndex(1)}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                index === 1 && { backgroundColor: theme.colors.primary + "15" },
-              ]}
-            >
-              <Package
-                size={20}
-                color={
-                  index === 1
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-                strokeWidth={index === 1 ? 2.5 : 2}
-              />
-            </View>
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color:
-                    index === 1
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              Stock
-            </Text>
-          </TouchableOpacity>
-
-          {/* Tab 2: AI Hub */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => setIndex(2)}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                index === 2 && { backgroundColor: theme.colors.primary + "15" },
-              ]}
-            >
-              <Sparkles
-                size={20}
-                color={
-                  index === 2
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-                strokeWidth={index === 2 ? 2.5 : 2}
-              />
-            </View>
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color:
-                    index === 2
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              AI Hub
-            </Text>
-          </TouchableOpacity>
-
-          {/* Tab 3: Stats */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => setIndex(3)}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                index === 3 && { backgroundColor: theme.colors.primary + "15" },
-              ]}
-            >
-              <BarChart3
-                size={20}
-                color={
-                  index === 3
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-                strokeWidth={index === 3 ? 2.5 : 2}
-              />
-            </View>
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color:
-                    index === 3
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              Stats
-            </Text>
-          </TouchableOpacity>
-
-          {/* Tab 4: Me */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => setIndex(4)}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                index === 4 && { backgroundColor: theme.colors.primary + "15" },
-              ]}
-            >
-              <User
-                size={20}
-                color={
-                  index === 4
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-                strokeWidth={index === 4 ? 2.5 : 2}
-              />
-            </View>
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color:
-                    index === 4
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              Me
-            </Text>
-          </TouchableOpacity>
+            return (
+              <TouchableOpacity
+                key={route.key}
+                style={[
+                  styles.tabItem,
+                ]}
+                onPress={() => setIndex(routeIndex)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.iconContainer,
+                    isActive && {
+                      backgroundColor: theme.colors.primary + "15",
+                    },
+                  ]}
+                >
+                  <Icon
+                    size={20}
+                    color={
+                      isActive
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color: isActive
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {route.title}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
+      </View>
+    );
+  };
+
+  const backdropOpacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  return (
+    <View style={{ flex: 1 }}>
+      <TabView
+        navigationState={{ index, routes }}
+        renderScene={renderScene}
+        onIndexChange={setIndex}
+        initialLayout={{ width: layout.width }}
+        tabBarPosition="bottom"
+        renderTabBar={renderTabBar}
+        swipeEnabled={!isExpanded}
+        animationEnabled={true}
+      />
+
+      {/* Dim backdrop overlay for closing the FAB menu when clicking outside */}
+      <Animated.View
+        pointerEvents={isExpanded ? "auto" : "none"}
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
+            opacity: backdropOpacity,
+            zIndex: 99,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={toggleMenu}
+        />
+      </Animated.View>
+
+      {/* Floating Action Menu Wrapper (Touch-safe parent that prevents boundary clipping) */}
+      <View style={[styles.floatingMenuWrapper, { zIndex: 100 }]} pointerEvents="box-none">
+        {/* Secondary Floating Menu Items */}
+        {/* Add Product Option */}
+        <Animated.View
+          pointerEvents={isExpanded ? "auto" : "none"}
+          style={[
+            styles.secondaryButtonRow,
+            {
+              opacity: animation,
+              transform: [{ translateY: addTranslateY }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigateTo("/addProduct")}
+            style={[
+              styles.labelContainer,
+              {
+                backgroundColor: isDarkMode
+                  ? "rgba(45, 45, 45, 0.95)"
+                  : "rgba(253, 254, 252, 0.95)",
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[styles.labelText, { color: theme.colors.text }]}>
+              Add Product
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.secondaryButton,
+              {
+                backgroundColor: theme.colors.primary,
+                borderColor: isDarkMode ? "#121212" : theme.colors.card,
+              },
+            ]}
+            onPress={() => navigateTo("/addProduct")}
+            activeOpacity={0.8}
+          >
+            <Plus size={20} color="#FFFFFF" strokeWidth={3} />
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Scan Barcode Option */}
+        <Animated.View
+          pointerEvents={isExpanded ? "auto" : "none"}
+          style={[
+            styles.secondaryButtonRow,
+            {
+              opacity: animation,
+              transform: [{ translateY: scanTranslateY }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigateTo("/scanner")}
+            style={[
+              styles.labelContainer,
+              {
+                backgroundColor: isDarkMode
+                  ? "rgba(45, 45, 45, 0.95)"
+                  : "rgba(253, 254, 252, 0.95)",
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[styles.labelText, { color: theme.colors.text }]}>
+              Scan Barcode
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.secondaryButton,
+              {
+                backgroundColor: theme.colors.primary,
+                borderColor: isDarkMode ? "#121212" : theme.colors.card,
+              },
+            ]}
+            onPress={() => navigateTo("/scanner")}
+            activeOpacity={0.8}
+          >
+            <Scan size={20} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Floating Add Button - Shifted Above Right Side */}
         <TouchableOpacity
@@ -265,29 +304,18 @@ export default function TabLayout() {
             styles.floatingAddButton,
             {
               backgroundColor: theme.colors.primary,
-              borderColor: isDarkMode ? "#121212" : "#FFFFFF",
+              borderColor: isDarkMode ? "#121212" : theme.colors.card,
             },
           ]}
-          onPress={() => router.push("/addProduct")}
+          onPress={toggleMenu}
           activeOpacity={0.8}
         >
-          <Plus size={28} color="#FFFFFF" strokeWidth={3} />
+          <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+            <Plus size={28} color="#FFFFFF" strokeWidth={3} />
+          </Animated.View>
         </TouchableOpacity>
       </View>
-    );
-  };
-
-  return (
-    <TabView
-      navigationState={{ index, routes }}
-      renderScene={renderScene}
-      onIndexChange={setIndex}
-      initialLayout={{ width: layout.width }}
-      tabBarPosition="bottom"
-      renderTabBar={renderTabBar}
-      swipeEnabled={true}
-      animationEnabled={true}
-    />
+    </View>
   );
 }
 
@@ -317,10 +345,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flex: 1,
   },
+  floatingMenuWrapper: {
+    position: "absolute",
+    bottom: Platform.OS === "ios" ? 30 : 20,
+    left: 20,
+    right: 20,
+    height: 300,
+    pointerEvents: "box-none",
+  },
   floatingAddButton: {
     position: "absolute",
     right: 15,
-    top: -65,
+    bottom: 77,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -332,6 +368,42 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 8,
     borderWidth: 4,
+  },
+  secondaryButtonRow: {
+    position: "absolute",
+    right: 21,
+    bottom: 83,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  secondaryButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 3,
+  },
+  labelContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  labelText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   iconContainer: {
     width: 40,

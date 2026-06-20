@@ -19,7 +19,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: isDarkMode ? "#1E293B" : "#F1F5F9",
+      backgroundColor: isDarkMode ? "#1E293B" : "#EFF7F2",
       justifyContent: "center",
       alignItems: "center",
     },
@@ -29,7 +29,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       color: theme.colors.text,
     },
     scrollContent: {
-      paddingBottom: 40,
+      paddingBottom: 110,
     },
     // Profile Info Section
     profileSection: {
@@ -129,5 +129,44 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     logoutText: {
       color: theme.colors.error,
+    },
+    adminDashboardContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 12,
+      marginBottom: 24,
+    },
+    adminCard: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderRadius: 20,
+      borderWidth: 1,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    adminCardIconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    adminCardInfo: {
+      flex: 1,
+    },
+    adminCardNumber: {
+      fontSize: 18,
+      fontWeight: "900",
+      marginBottom: 2,
+    },
+    adminCardLabel: {
+      fontSize: 12,
+      fontWeight: "600",
     },
   });

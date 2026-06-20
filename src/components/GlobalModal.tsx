@@ -70,7 +70,7 @@ export default function GlobalModal() {
                 {
                   backgroundColor: isDarkMode
                     ? "rgba(255,255,255,0.05)"
-                    : "#F1F5F9",
+                    : "#EFF7F2",
                 },
               ]}
               onPress={handleCancel}

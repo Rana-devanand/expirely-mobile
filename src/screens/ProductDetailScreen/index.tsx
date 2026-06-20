@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
+import {
+  DimensionValue,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
@@ -11,15 +18,19 @@ import { useAppTheme } from "../../hooks/useAppTheme";
 import { useGlobalModal } from "../../hooks/useGlobalModal";
 import { getStyles } from "./styles";
 import { toast } from "../../utils/toast";
+import { formatRemainingTime } from "../../utils/dateHelpers";
 import {
   ChevronLeft,
   Pencil,
   Trash2,
   Clock,
   Tag,
-  BarChart3,
+  Package,
   Calendar,
   AlertCircle,
+  CheckCircle2,
+  StickyNote,
+  ListChecks,
 } from "lucide-react-native";
 import { ActivityIndicator } from "react-native";
 import dayjs from "dayjs";
@@ -86,6 +97,22 @@ export default function ProductDetailScreen() {
         .subtract(product.daysLeft, "day")
         .format("MMM D, YYYY");
   const formattedExpiry = dayjs(product.expiryDate).format("MMM D, YYYY");
+  const statusColor =
+    product.status === "expired"
+      ? theme.colors.error
+      : product.status === "warning"
+        ? theme.colors.warning
+        : theme.colors.success;
+  const statusBg =
+    product.status === "expired"
+      ? theme.colors.expiredBg
+      : product.status === "warning"
+        ? theme.colors.expiringBg
+        : theme.colors.freshBg;
+  const progressWidth = `${Math.max(
+    0,
+    Math.min(100, ((product.daysLeft || 0) / 30) * 100),
+  )}%` as DimensionValue;
 
   const getEmoji = (category: string) => {
     switch (category.toLowerCase()) {
@@ -108,8 +135,7 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Top Banner Section */}
-      <View style={styles.topSection}>
+      <View style={[styles.topSection, { backgroundColor: statusBg }]}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.iconButton}
@@ -141,7 +167,7 @@ export default function ProductDetailScreen() {
           {product.imageUrl ? (
             <Image
               source={{ uri: product.imageUrl }}
-              style={{ width: "100%", height: "100%", borderRadius: 30 }}
+              style={styles.heroImage}
               resizeMode="cover"
             />
           ) : (
@@ -150,35 +176,47 @@ export default function ProductDetailScreen() {
         </View>
 
         <Text style={styles.title}>{product.name}</Text>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{product.status.toUpperCase()}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+          <Text style={styles.statusText}>
+            {product.isConsumed ? "USED" : product.status.toUpperCase()}
+          </Text>
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Expiry Countdown */}
         <View style={styles.countdownCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
-              <Clock size={20} color={theme.colors.success} />
+              <Clock size={20} color={statusColor} />
               <Text style={styles.cardTitle}>Expiry Countdown</Text>
             </View>
-            <Text style={styles.countdownValue}>{product.daysLeft < 0 ? "Expired" : `${product.daysLeft}d`}</Text>
+            <Text style={[styles.countdownValue, { color: statusColor }]}>
+              {formatRemainingTime(product.expiryDate, true)}
+            </Text>
           </View>
           <View style={styles.progressBarBg}>
             <View
               style={[
                 styles.progressBarFill,
                 {
-                  width: `${Math.max(0, Math.min(100, (product.daysLeft / 10) * 100))}%`,
-                  backgroundColor: product.daysLeft < 0 ? theme.colors.error : theme.colors.primary,
+                  width: progressWidth,
+                  backgroundColor: statusColor,
                 },
               ]}
             />
           </View>
+          <View style={styles.countdownFooter}>
+            <Text style={styles.countdownHint}>
+              {product.daysLeft < 0
+                ? "This item is past its expiry date."
+                : "Use this item before the date below."}
+            </Text>
+            <Text style={[styles.countdownDate, { color: statusColor }]}>
+              {formattedExpiry}
+            </Text>
+          </View>
         </View>
 
-        {/* Info Grid */}
         <View style={styles.grid}>
           <View style={styles.gridItem}>
             <View style={styles.gridIconBox}>
@@ -190,18 +228,18 @@ export default function ProductDetailScreen() {
 
           <View style={styles.gridItem}>
             <View style={styles.gridIconBox}>
-              <BarChart3 size={18} color={theme.colors.warning} />
+              <Package size={18} color={theme.colors.warning} />
             </View>
-            <Text style={styles.gridLabel}>Days Remaining</Text>
-            <Text style={styles.gridValue}>{product.daysLeft < 0 ? "Expired" : `${product.daysLeft} days`}</Text>
+            <Text style={styles.gridLabel}>Quantity</Text>
+            <Text style={styles.gridValue}>{product.qty || 1}</Text>
           </View>
 
           <View style={styles.gridItem}>
             <View style={styles.gridIconBox}>
-              <Calendar size={18} color="#A78BFA" />
+              <CheckCircle2 size={18} color={statusColor} />
             </View>
-            <Text style={styles.gridLabel}>Added On</Text>
-            <Text style={styles.gridValue}>{formattedAddedOn}</Text>
+            <Text style={styles.gridLabel}>Remaining</Text>
+            <Text style={styles.gridValue}>{formatRemainingTime(product.expiryDate, false)}</Text>
           </View>
 
           <View style={styles.gridItem}>
@@ -213,25 +251,30 @@ export default function ProductDetailScreen() {
           </View>
         </View>
 
-        {/* Notes Section */}
         <View style={styles.notesCard}>
-          <Text style={styles.notesLabel}>Notes</Text>
+          <View style={styles.notesHeader}>
+            <StickyNote size={18} color={theme.colors.primary} />
+            <Text style={styles.notesLabel}>Notes</Text>
+          </View>
           <Text style={styles.notesText}>
             {product.notes || "No notes added for this product."}
           </Text>
         </View>
 
         {product.ingredients ? (
-          <View style={[styles.notesCard, { marginTop: 16, marginBottom: 20 }]}>
-            <Text style={styles.notesLabel}>Ingredients</Text>
-            <View style={{ marginTop: 8 }}>
-              {product.ingredients.split(',').map((item, index) => {
+          <View style={styles.ingredientsCard}>
+            <View style={styles.notesHeader}>
+              <ListChecks size={18} color={theme.colors.primary} />
+              <Text style={styles.notesLabel}>Ingredients</Text>
+            </View>
+            <View style={styles.ingredientsList}>
+              {product.ingredients.split(",").map((item, index) => {
                 const trimmed = item.trim();
                 if (!trimmed) return null;
                 return (
-                  <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <Text style={{ color: theme.colors.text, fontSize: 14, marginRight: 8 }}>•</Text>
-                    <Text style={{ color: theme.colors.text, fontSize: 14, flex: 1, lineHeight: 20 }}>{trimmed}</Text>
+                  <View key={index} style={styles.ingredientRow}>
+                    <View style={styles.ingredientDot} />
+                    <Text style={styles.ingredientText}>{trimmed}</Text>
                   </View>
                 );
               })}

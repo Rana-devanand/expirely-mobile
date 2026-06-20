@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,17 +13,29 @@ import { useAppTheme } from "../../hooks/useAppTheme";
 import {
   ChevronLeft,
   Search,
-  Refrigerator,
+  PackageCheck,
   Lightbulb,
   Info,
+  Snowflake,
+  ShieldCheck,
+  RefreshCw,
+  ChevronRight,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { getStyles } from "./styles";
-import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { CONFIG } from "../../services/config";
+import { api } from "../../services/api";
 import { Product } from "../../types";
+
+type StorageTipsResponse = {
+  success: boolean;
+  data: {
+    tips: string[];
+    fact: string;
+    product: string;
+  };
+};
 
 export default function StorageGuruScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -41,18 +53,20 @@ export default function StorageGuruScreen() {
   } | null>(null);
 
   const filteredProducts = products
-    .filter((p: Product) => p.name.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 5);
+    .filter((product: Product) =>
+      product.name.toLowerCase().includes(search.toLowerCase()),
+    )
+    .slice(0, 8);
 
   const fetchTips = async (productName: string) => {
     setLoading(true);
     setData(null);
     try {
-      const response = await axios.get(`${CONFIG.API_URL}/ai/storage-tips`, {
-        params: { productName },
-      });
-      if (response.data.success) {
-        setData(response.data.data);
+      const response = await api.get<StorageTipsResponse>(
+        `/ai/storage-tips?productName=${encodeURIComponent(productName)}`,
+      );
+      if (response.success) {
+        setData(response.data);
       }
     } catch (error) {
       console.error("Error fetching storage tips:", error);
@@ -76,7 +90,10 @@ export default function StorageGuruScreen() {
         >
           <ChevronLeft size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>AI Storage Guru</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.eyebrow}>Storage assistant</Text>
+          <Text style={styles.title}>AI Storage Guru</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -85,85 +102,104 @@ export default function StorageGuruScreen() {
       >
         {!selectedProduct ? (
           <>
+            <View style={styles.heroPanel}>
+              <View style={styles.heroIcon}>
+                <PackageCheck size={28} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.heroTitle}>Keep every item fresh longer</Text>
+              <Text style={styles.heroSubtitle}>
+                Pick a product and get practical storage tips, freshness
+                guidance, and shelf-life facts tailored to that item.
+              </Text>
+              <View style={styles.heroStats}>
+                <View style={styles.heroStat}>
+                  <Snowflake size={15} color="#3B82F6" />
+                  <Text style={styles.heroStatText}>Freshness tips</Text>
+                </View>
+                <View style={styles.heroStat}>
+                  <ShieldCheck size={15} color={theme.colors.success} />
+                  <Text style={styles.heroStatText}>Safer storage</Text>
+                </View>
+              </View>
+            </View>
+
             <View style={styles.searchContainer}>
               <Search size={20} color={theme.colors.textSecondary} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search a product to get tips..."
+                placeholder="Search inventory..."
                 placeholderTextColor={theme.colors.textSecondary}
                 value={search}
                 onChangeText={setSearch}
               />
             </View>
 
-            <Text style={styles.sectionTitle}>Select from Inventory</Text>
-            {filteredProducts.map((p: Product) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Select Product</Text>
+              <Text style={styles.sectionSubtitle}>
+                {filteredProducts.length} shown
+              </Text>
+            </View>
+
+            {filteredProducts.map((product: Product) => (
               <TouchableOpacity
-                key={p.id}
+                key={product.id}
                 style={styles.productItem}
-                onPress={() => handleProductSelect(p)}
+                onPress={() => handleProductSelect(product)}
+                activeOpacity={0.78}
               >
-                <View
-                  style={[
-                    styles.productIcon,
-                    { backgroundColor: theme.colors.primary + "15" },
-                  ]}
-                >
-                  {p.imageUrl ? (
-                    <RNImage
-                      source={{ uri: p.imageUrl }}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: 10,
-                      }}
-                    />
-                  ) : (
-                    <Refrigerator size={24} color={theme.colors.primary} />
-                  )}
+                <View style={styles.productLeft}>
+                  <View style={styles.productIcon}>
+                    {product.imageUrl ? (
+                      <RNImage
+                        source={{ uri: product.imageUrl }}
+                        style={styles.productImage}
+                      />
+                    ) : (
+                      <PackageCheck size={24} color={theme.colors.primary} />
+                    )}
+                  </View>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName} numberOfLines={1}>
+                      {product.name}
+                    </Text>
+                    <Text style={styles.productMeta}>
+                      {product.category} • {product.daysLeft} days left
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.productName}>{p.name}</Text>
+                <View style={styles.chevronWrap}>
+                  <ChevronRight size={18} color={theme.colors.textSecondary} />
+                </View>
               </TouchableOpacity>
             ))}
           </>
         ) : (
-          <View style={{ marginTop: 10 }}>
+          <View>
             <TouchableOpacity
-              style={{
-                marginBottom: 20,
-                flexDirection: "row",
-                alignItems: "center",
-              }}
+              style={styles.changeButton}
               onPress={() => {
                 setSelectedProduct(null);
                 setData(null);
               }}
             >
-              <Text style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                ← Select another product
-              </Text>
+              <RefreshCw size={16} color={theme.colors.primary} />
+              <Text style={styles.changeButtonText}>Select another product</Text>
             </TouchableOpacity>
 
-            <View style={{ alignItems: "center", marginBottom: 30 }}>
-              <View
-                style={[
-                  styles.productIcon,
-                  {
-                    width: 80,
-                    height: 80,
-                    borderRadius: 25,
-                    backgroundColor: theme.colors.primary + "15",
-                  },
-                ]}
-              >
-                <Refrigerator size={40} color={theme.colors.primary} />
+            <View style={styles.selectedCard}>
+              <View style={styles.selectedIcon}>
+                {selectedProduct.imageUrl ? (
+                  <RNImage
+                    source={{ uri: selectedProduct.imageUrl }}
+                    style={styles.productImage}
+                  />
+                ) : (
+                  <PackageCheck size={36} color={theme.colors.primary} />
+                )}
               </View>
-              <Text style={[styles.title, { marginTop: 12 }]}>
-                {selectedProduct.name}
-              </Text>
-              <Text style={{ color: theme.colors.textSecondary }}>
-                Storage Optimization
-              </Text>
+              <Text style={styles.selectedTitle}>{selectedProduct.name}</Text>
+              <Text style={styles.selectedSubtitle}>Storage optimization</Text>
             </View>
 
             {loading ? (
@@ -178,56 +214,21 @@ export default function StorageGuruScreen() {
                 <View style={styles.tipsContainer}>
                   <Text style={styles.sectionTitle}>Expert Tips</Text>
                   {data.tips.map((tip, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.tipCard,
-                        {
-                          borderLeftColor:
-                            index === 0
-                              ? "#3B82F6"
-                              : index === 1
-                                ? "#F59E0B"
-                                : "#10B981",
-                        },
-                      ]}
-                    >
-                      <View style={{ flexDirection: "row", marginBottom: 8 }}>
-                        <Lightbulb
-                          size={18}
-                          color={theme.colors.textSecondary}
-                        />
-                        <Text
-                          style={{
-                            marginLeft: 8,
-                            fontWeight: "bold",
-                            color: theme.colors.textSecondary,
-                          }}
-                        >
-                          Tip #{index + 1}
-                        </Text>
+                    <View key={index} style={styles.tipCard}>
+                      <View style={styles.tipHeader}>
+                        <View style={styles.tipIcon}>
+                          <Lightbulb size={17} color={theme.colors.primary} />
+                        </View>
+                        <Text style={styles.tipLabel}>Tip {index + 1}</Text>
                       </View>
                       <Text style={styles.tipText}>{tip}</Text>
                     </View>
                   ))}
 
                   <View style={styles.factCard}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginBottom: 12,
-                      }}
-                    >
+                    <View style={styles.factHeader}>
                       <Info size={20} color={theme.colors.primary} />
-                      <Text
-                        style={[
-                          styles.factLabel,
-                          { marginLeft: 8, marginBottom: 0 },
-                        ]}
-                      >
-                        Did you know?
-                      </Text>
+                      <Text style={styles.factLabel}>Did you know?</Text>
                     </View>
                     <Text style={styles.factText}>{data.fact}</Text>
                   </View>
