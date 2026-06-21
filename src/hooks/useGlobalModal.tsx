@@ -5,6 +5,7 @@ interface ModalOptions {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  hideCancel?: boolean;
   onConfirm: () => void;
   onCancel?: () => void;
   type?: "danger" | "info" | "success";

@@ -4,6 +4,7 @@ import {
   LoginCredentials,
   SignUpData,
   ProfileResponse,
+  ReminderSettings,
 } from "../types/auth";
 
 export const userService = {
@@ -41,6 +42,17 @@ export const userService = {
     api.post<{ success: boolean; message: string }>("/users/fcm-token", {
       fcmToken,
     }),
+
+  getReminderSettings: () =>
+    api.get<{ success: boolean; data: ReminderSettings }>(
+      "/users/reminder-settings",
+    ),
+
+  updateReminderSettings: (data: ReminderSettings) =>
+    api.patch<{ success: boolean; message: string; data: any }>(
+      "/users/reminder-settings",
+      data,
+    ),
 
   forgotPassword: (email: string) =>
     api.post<{ success: boolean; message: string }>("/users/forgot-password", { email }),

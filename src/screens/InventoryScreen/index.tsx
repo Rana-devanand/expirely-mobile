@@ -1,33 +1,69 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
+  ActivityIndicator,
   Image,
   Modal,
-  ActivityIndicator,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
+import {
+  Activity,
+  Calendar,
+  Check,
+  ChevronRight,
+  Database,
+  HelpCircle,
+  Layers,
+  Package,
+  Search,
+  SlidersHorizontal,
+  Snowflake,
+  SortAsc,
+  Thermometer,
+  X,
+} from "lucide-react-native";
 import { RootState } from "../../store";
 import { Product } from "../../types";
 import { useAppTheme } from "../../hooks/useAppTheme";
-import {
-  Search,
-  SlidersHorizontal,
-  ChevronRight,
-  Package,
-  Layers,
-  X,
-  SortAsc,
-  Calendar,
-  Database,
-  Check,
-} from "lucide-react-native";
 import { getStyles } from "./styles";
 import { formatRemainingTime } from "../../utils/dateHelpers";
+
+const getZoneColor = (zone?: string) => {
+  switch (zone) {
+    case "fridge":
+      return "#3B82F6";
+    case "freezer":
+      return "#06B6D4";
+    case "pantry":
+      return "#F59E0B";
+    case "medicine_box":
+      return "#10B981";
+    case "other":
+    default:
+      return "#64748B";
+  }
+};
+
+const getZoneLabel = (zone?: string) => {
+  switch (zone) {
+    case "fridge":
+      return "Fridge";
+    case "freezer":
+      return "Freezer";
+    case "pantry":
+      return "Pantry";
+    case "medicine_box":
+      return "Medicine";
+    case "other":
+    default:
+      return "Other";
+  }
+};
 
 export default function InventoryScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -41,26 +77,39 @@ export default function InventoryScreen() {
   const [isSortVisible, setIsSortVisible] = useState(false);
   const [sortBy, setSortBy] = useState<"expiry" | "name" | "qty">("expiry");
   const [showConsumed, setShowConsumed] = useState(false);
+  const [selectedZone, setSelectedZone] = useState<
+    "all" | "fridge" | "freezer" | "pantry" | "medicine_box" | "other"
+  >("all");
 
-  // Grouping & Sorting logic
+  const getInventoryRemainingLabel = (expiryDate: string) => {
+    const value = formatRemainingTime(expiryDate, false);
+    if (value === "Expired") return value;
+    return value.includes("left")
+      ? value.replace("left", "remaining").trim()
+      : value;
+  };
+
   const groupedProducts = useMemo(() => {
-    let filtered = products.filter((p) => {
+    const filtered = products.filter((p) => {
       const matchesSearch = p.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       const matchesArchive = showConsumed ? p.isConsumed : !p.isConsumed;
-      return matchesSearch && matchesArchive;
+      const matchesZone =
+        selectedZone === "all" || p.storageLocation === selectedZone;
+      return matchesSearch && matchesArchive && matchesZone;
     });
 
-    // Apply Sorting
     filtered.sort((a, b) => {
       if (sortBy === "expiry") {
         return (
           new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
         );
-      } else if (sortBy === "name") {
+      }
+      if (sortBy === "name") {
         return a.name.localeCompare(b.name);
-      } else if (sortBy === "qty") {
+      }
+      if (sortBy === "qty") {
         return (b.qty || 1) - (a.qty || 1);
       }
       return 0;
@@ -68,25 +117,18 @@ export default function InventoryScreen() {
 
     const groups: { [key: string]: Product[] } = {};
     filtered.forEach((product) => {
-      const cat = product.category || "Other";
-      if (!groups[cat]) {
-        groups[cat] = [];
+      const category = product.category || "Other";
+      if (!groups[category]) {
+        groups[category] = [];
       }
-      groups[cat].push(product);
+      groups[category].push(product);
     });
     return groups;
-  }, [products, searchQuery, sortBy, showConsumed]);
+  }, [products, searchQuery, selectedZone, showConsumed, sortBy]);
 
   const categories = Object.keys(groupedProducts).sort();
 
   const renderProductCard = (product: Product) => {
-    const statusColor =
-      product.status === "expired"
-        ? theme.colors.error
-        : product.status === "warning"
-          ? theme.colors.warning
-          : theme.colors.success;
-
     const badgeBg =
       product.status === "expired"
         ? theme.colors.expiredBg
@@ -96,35 +138,50 @@ export default function InventoryScreen() {
 
     return (
       <View key={product.id} style={styles.productCard}>
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, { backgroundColor: badgeBg }]}>
           {product.imageUrl ? (
             <Image
               source={{ uri: product.imageUrl }}
-              style={{ width: "100%", height: "100%", borderRadius: 12 }}
+              style={styles.productImage}
             />
           ) : (
-            <Text style={{ fontSize: 24 }}>{getEmoji(product.category)}</Text>
+            <Text style={{ fontSize: 30 }}>{getEmoji(product.category)}</Text>
           )}
         </View>
 
         <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={1}>
+          <Text style={styles.productName} numberOfLines={2}>
             {product.name}
           </Text>
-          <Text style={styles.productCategory}>
-            Qty: {product.qty || 1} • {product.expiryDate}
-          </Text>
+          <View style={styles.productMetaRow}>
+            <Text style={styles.productMetaText} numberOfLines={1}>
+              {product.category}
+            </Text>
+            <Text style={styles.productMetaDot}>|</Text>
+            <Text
+              style={[
+                styles.productMetaText,
+                { color: getZoneColor(product.storageLocation) },
+              ]}
+              numberOfLines={1}
+            >
+              {getZoneLabel(product.storageLocation)}
+            </Text>
+          </View>
+          <View style={styles.productBottomRow}>
+            <View style={styles.productTimeRow}>
+              <Calendar size={14} color={theme.colors.textSecondary} />
+              <Text style={styles.productTimeText} numberOfLines={1}>
+                {getInventoryRemainingLabel(product.expiryDate)}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        <View style={[styles.expiryBadge, { backgroundColor: badgeBg }]}>
-          <Text style={[styles.expiryBadgeText, { color: statusColor }]}>
-            {formatRemainingTime(product.expiryDate, true)}
-          </Text>
-        </View>
         <ChevronRight
           size={16}
-          color={theme.colors.border}
-          style={{ marginLeft: 8 }}
+          color={theme.colors.textSecondary}
+          style={styles.productChevron}
         />
       </View>
     );
@@ -142,7 +199,6 @@ export default function InventoryScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.inventoryLabel}>Smart Tracker</Text>
           <View style={styles.headerRow}>
@@ -175,7 +231,6 @@ export default function InventoryScreen() {
           </View>
         </View>
 
-        {/* Global Summary Card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryMain}>
             <Text style={styles.summaryTitle}>Total Stock Items</Text>
@@ -186,7 +241,6 @@ export default function InventoryScreen() {
           </View>
         </View>
 
-        {/* Search Section */}
         <View style={styles.searchContainer}>
           <Search size={20} color={theme.colors.textSecondary} />
           <TextInput
@@ -198,7 +252,82 @@ export default function InventoryScreen() {
           />
         </View>
 
-        {/* Grouped Content */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={{ paddingRight: 20 }}
+        >
+          {[
+            {
+              value: "all",
+              label: "All Zones",
+              icon: Layers,
+              color: theme.colors.primary,
+            },
+            {
+              value: "fridge",
+              label: "Fridge",
+              icon: Thermometer,
+              color: "#3B82F6",
+            },
+            {
+              value: "freezer",
+              label: "Freezer",
+              icon: Snowflake,
+              color: "#06B6D4",
+            },
+            {
+              value: "pantry",
+              label: "Pantry",
+              icon: Package,
+              color: "#F59E0B",
+            },
+            {
+              value: "medicine_box",
+              label: "Medicine",
+              icon: Activity,
+              color: "#10B981",
+            },
+            {
+              value: "other",
+              label: "Other",
+              icon: HelpCircle,
+              color: "#64748B",
+            },
+          ].map((zone) => {
+            const isSelected = selectedZone === zone.value;
+            const Icon = zone.icon;
+            return (
+              <TouchableOpacity
+                key={zone.value}
+                style={[
+                  styles.filterChip,
+                  isSelected && {
+                    borderColor: zone.color,
+                    backgroundColor: zone.color + "14",
+                  },
+                ]}
+                onPress={() => setSelectedZone(zone.value as typeof selectedZone)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  size={16}
+                  color={isSelected ? zone.color : theme.colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    isSelected && { color: zone.color, fontWeight: "900" },
+                  ]}
+                >
+                  {zone.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
         {loading && categories.length === 0 ? (
           <View style={{ padding: 40, alignItems: "center" }}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -223,13 +352,13 @@ export default function InventoryScreen() {
                 </Text>
               </View>
               <View style={styles.categoryList}>
-                {groupedProducts[category].map((p) => (
+                {groupedProducts[category].map((product) => (
                   <TouchableOpacity
-                    key={p.id}
+                    key={product.id}
                     disabled={loading}
-                    onPress={() => router.push(`/product/${p.id}`)}
+                    onPress={() => router.push(`/product/${product.id}`)}
                   >
-                    {renderProductCard(p)}
+                    {renderProductCard(product)}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -238,7 +367,6 @@ export default function InventoryScreen() {
         )}
       </ScrollView>
 
-      {/* Sorting Modal */}
       <Modal
         visible={isSortVisible}
         transparent
@@ -272,7 +400,7 @@ export default function InventoryScreen() {
                     isActive && styles.activeSortOption,
                   ]}
                   onPress={() => {
-                    setSortBy(option.id as any);
+                    setSortBy(option.id as "expiry" | "name" | "qty");
                     setIsSortVisible(false);
                   }}
                 >
@@ -288,7 +416,9 @@ export default function InventoryScreen() {
                   >
                     {option.label}
                   </Text>
-                  {isActive && <Check size={20} color={theme.colors.primary} />}
+                  {isActive && (
+                    <Check size={20} color={theme.colors.primary} />
+                  )}
                 </TouchableOpacity>
               );
             })}

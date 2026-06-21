@@ -5,9 +5,10 @@ import {
   ScrollView,
   Dimensions,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { getStyles } from "./styles";
 import BarChart from "react-native-chart-kit/dist/BarChart";
@@ -21,6 +22,7 @@ import {
 } from "lucide-react-native";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
+import { fetchUsageSummaryAsync } from "../../store/usageSlice";
 
 dayjs.extend(isBetween);
 
@@ -46,8 +48,10 @@ function buildFallbackInsight(
 export default function AnalyticsScreen() {
   const { theme, isDarkMode } = useAppTheme();
   const styles = getStyles(theme, isDarkMode);
+  const dispatch = useDispatch<AppDispatch>();
 
   const { products } = useSelector((state: RootState) => state.products);
+  const { summary, loading: summaryLoading } = useSelector((state: RootState) => state.usage);
   const [aiInsight, setAiInsight] = useState<string>("");
   const [isInsightLoading, setIsInsightLoading] = useState<boolean>(false);
 
@@ -124,6 +128,45 @@ export default function AnalyticsScreen() {
   };
 
   const totalItems = products.length;
+
+  useEffect(() => {
+    dispatch(fetchUsageSummaryAsync());
+  }, [dispatch, products]);
+
+  const outcomeStats = useMemo(() => {
+    if (!summary) return { USED_FULLY: 0, USED_PARTIALLY: 0, WASTED: 0 };
+    return summary.outcomeBreakdown;
+  }, [summary]);
+
+  const usageOutcomeData = useMemo(() => {
+    return [
+      {
+        name: "Fully Used",
+        population: outcomeStats.USED_FULLY,
+        color: "#10B981",
+        legendFontColor: theme.colors.text,
+        legendFontSize: 12,
+      },
+      {
+        name: "Partially Used",
+        population: outcomeStats.USED_PARTIALLY,
+        color: "#3B82F6",
+        legendFontColor: theme.colors.text,
+        legendFontSize: 12,
+      },
+      {
+        name: "Wasted",
+        population: outcomeStats.WASTED,
+        color: "#EF4444",
+        legendFontColor: theme.colors.text,
+        legendFontSize: 12,
+      },
+    ];
+  }, [outcomeStats, theme.colors.text]);
+
+  const totalUsageEvents = useMemo(() => {
+    return summary ? summary.totalCount : 0;
+  }, [summary]);
 
   useEffect(() => {
     const fetchInsight = async () => {
@@ -218,6 +261,118 @@ export default function AnalyticsScreen() {
               ))}
             </View>
           </View>
+        </View>
+
+        {/* Consumption & Waste Statistics Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Consumption & Waste</Text>
+            <Text style={styles.cardSubtitle}>
+              Analysis of logged inventory events
+            </Text>
+          </View>
+
+          {summaryLoading && !summary ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
+          ) : totalUsageEvents === 0 ? (
+            <View style={{ paddingVertical: 10, alignItems: "center" }}>
+              <Lightbulb size={24} color={theme.colors.textSecondary} style={{ marginBottom: 8 }} />
+              <Text style={[styles.labelText, { textAlign: "center", color: theme.colors.textSecondary }]}>
+                No consumption logged yet.
+              </Text>
+              <Text style={[styles.cardSubtitle, { textAlign: "center", marginTop: 4 }]}>
+                Mark items as Used Fully, Used Partially, or Wasted in product details to populate charts.
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {/* Waste Rate Hero Banner */}
+              {summary && (
+                <View style={styles.outcomeRateWrapper}>
+                  <Text style={styles.wastedRateTitle}>Household Waste Rate</Text>
+                  <Text style={styles.wastedRateValue}>{summary.wasteRate}%</Text>
+                  <Text style={styles.wastedRateSubtitle}>
+                    {summary.wastedCount} out of {summary.totalCount} tracked product outcomes resulted in waste.
+                  </Text>
+                </View>
+              )}
+
+              {/* Pie Chart and Label List */}
+              <View style={styles.donutContainer}>
+                <PieChart
+                  data={usageOutcomeData}
+                  width={width * 0.4}
+                  height={140}
+                  chartConfig={chartConfig}
+                  accessor={"population"}
+                  backgroundColor={"transparent"}
+                  paddingLeft={"15"}
+                  center={[10, 0]}
+                  hasLegend={false}
+                  absolute
+                />
+
+                <View style={styles.chartLabelContainer}>
+                  {usageOutcomeData.map((item) => (
+                    <View key={item.name} style={{ gap: 4 }}>
+                      <View style={styles.chartLabelItem}>
+                        <View style={styles.chartLabelLeft}>
+                          <View
+                            style={[styles.dot, { backgroundColor: item.color }]}
+                          />
+                          <Text style={styles.labelText}>{item.name}</Text>
+                        </View>
+                        <Text style={styles.labelValue}>{item.population}</Text>
+                      </View>
+                      <View style={styles.progressTrack}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            {
+                              backgroundColor: item.color,
+                              width: `${totalUsageEvents > 0 ? (item.population / totalUsageEvents) * 100 : 0}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Top Wasted Categories Progress bars */}
+              {summary && summary.wastedByCategory.length > 0 && (
+                <View style={{ marginTop: 24 }}>
+                  <Text style={[styles.cardTitle, { fontSize: 15, marginBottom: 12 }]}>
+                    Top Wasted Categories
+                  </Text>
+                  <View style={styles.wastedCategoryList}>
+                    {summary.wastedByCategory.slice(0, 3).map((item) => {
+                      const ratio = summary.wastedCount > 0 ? (item.count / summary.wastedCount) * 100 : 0;
+                      return (
+                        <View key={item.category}>
+                          <View style={styles.wastedCategoryRow}>
+                            <Text style={styles.wastedCategoryName}>{item.category}</Text>
+                            <Text style={styles.wastedCategoryCount}>
+                              {item.count} item{item.count > 1 ? "s" : ""}
+                            </Text>
+                          </View>
+                          <View style={styles.wastedCategoryTrack}>
+                            <View
+                              style={[
+                                styles.wastedCategoryFill,
+                                { width: `${ratio}%` },
+                              ]}
+                            />
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Weekly Expiry Card */}

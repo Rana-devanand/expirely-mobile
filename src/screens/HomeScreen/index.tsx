@@ -2,7 +2,6 @@ import React from "react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
-  DimensionValue,
   View,
   Text,
   ScrollView,
@@ -11,15 +10,17 @@ import {
   Image,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { RootState, AppDispatch } from "../../store";
-import { fetchProductsAsync } from "../../store/productSlice";
+import { fetchProductsAsync, updateProductAsync, createProductAsync } from "../../store/productSlice";
 import {
   fetchNotifications,
   markAsReadAsync,
   markAllAsReadAsync,
 } from "../../store/notificationSlice";
-import { Product } from "../../types";
+import { fetchTemplatesAsync, trackTemplateUsageAsync } from "../../store/recurringSlice";
+import { Product, RecurringProductTemplate } from "../../types";
+import { toast } from "../../utils/toast";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { getTimeBasedGreeting, formatRemainingTime } from "../../utils/dateHelpers";
 import {
@@ -27,25 +28,38 @@ import {
   Zap,
   ChevronRight,
   Scan,
+  House,
   X,
   Plus,
+  Minus,
   Calendar,
   AlertTriangle,
   RefreshCcw,
   Layers,
   Timer,
-  Apple,
   Trash2,
+  Thermometer,
+  Snowflake,
+  Package,
+  Activity,
+  HelpCircle,
 } from "lucide-react-native";
 import { Modal, ActivityIndicator, RefreshControl } from "react-native";
 import { getStyles } from "./styles";
-import ExpiryTrendsGraph from "../../components/ExpiryTrendsGraph";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { generateProductActions } from "../../utils/productActions";
+import TodaysActions from "../../components/TodaysActions";
+import { useGlobalModal } from "../../hooks/useGlobalModal";
+import { addShoppingListItemAsync } from "../../store/shoppingSlice";
+import { admobService } from "../../services/admobService";
 
 dayjs.extend(relativeTime);
 
 export default function HomeScreen() {
   const { theme, isDarkMode } = useAppTheme();
   const router = useRouter();
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const { showModal } = useGlobalModal();
   const dispatch = useDispatch<AppDispatch>();
   const { products, loading } = useSelector(
     (state: RootState) => state.products,
@@ -55,26 +69,189 @@ export default function HomeScreen() {
     (state: RootState) => state.notifications,
   );
   const user = useSelector((state: RootState) => state.auth.user);
+  const { templates } = useSelector((state: RootState) => state.recurring);
   const styles = getStyles(theme, isDarkMode);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [allProductsFilter, setAllProductsFilter] = React.useState<
     "all" | "good" | "warning" | "expired"
   >("all");
+  const [dismissedIds, setDismissedIds] = React.useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = React.useState<RecurringProductTemplate | null>(null);
+  const [quickAddModalVisible, setQuickAddModalVisible] = React.useState(false);
+  const [quickAddQty, setQuickAddQty] = React.useState(1);
+  const [quickAddShelfLife, setQuickAddShelfLife] = React.useState(7);
+  const [quickAddLocation, setQuickAddLocation] = React.useState<"fridge" | "freezer" | "pantry" | "medicine_box" | "other">("other");
+  const [isQuickAdding, setIsQuickAdding] = React.useState(false);
+  const scrollViewRef = React.useRef<ScrollView | null>(null);
+  const [todaysActionsY, setTodaysActionsY] = React.useState(0);
+
+  const loadDismissedActions = React.useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem("@dismissed_actions");
+      if (stored) {
+        setDismissedIds(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Error loading dismissed actions", e);
+    }
+  }, []);
 
   React.useEffect(() => {
     dispatch(fetchProductsAsync());
     dispatch(fetchNotifications());
-  }, [dispatch]);
+    dispatch(fetchTemplatesAsync());
+    loadDismissedActions();
+  }, [dispatch, loadDismissedActions]);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       dispatch(fetchProductsAsync()),
       dispatch(fetchNotifications()),
+      dispatch(fetchTemplatesAsync()),
+      loadDismissedActions(),
     ]);
     setRefreshing(false);
-  }, [dispatch]);
+  }, [dispatch, loadDismissedActions]);
+
+  const handleMarkUsed = React.useCallback(
+    async (productId: string) => {
+      try {
+        const product = products.find((p) => p.id === productId);
+        await dispatch(updateProductAsync({ id: productId, data: { isConsumed: true } })).unwrap();
+
+        if (product) {
+          showModal({
+            title: "Add to Shopping List?",
+            message: `Would you like to add "${product.name}" to your shopping list?`,
+            confirmText: "Add",
+            cancelText: "Cancel",
+            type: "success",
+            onConfirm: () => {
+              dispatch(
+                addShoppingListItemAsync({
+                  name: product.name,
+                  category: product.category,
+                  qty: 1,
+                })
+              );
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Failed to mark product as used", error);
+      }
+    },
+    [dispatch, products, showModal],
+  );
+
+  const handleDismissAction = React.useCallback(
+    async (actionId: string) => {
+      try {
+        const updated = [...dismissedIds, actionId];
+        setDismissedIds(updated);
+        await AsyncStorage.setItem("@dismissed_actions", JSON.stringify(updated));
+      } catch (error) {
+        console.error("Failed to dismiss action", error);
+      }
+    },
+    [dismissedIds],
+  );
+
+  const handleViewProduct = React.useCallback(
+    (productId: string) => {
+      router.push({
+        pathname: "/product/[id]",
+        params: { id: productId },
+      });
+    },
+    [router],
+  );
+
+  const handleStaplePress = React.useCallback(
+    (item: RecurringProductTemplate) => {
+      setSelectedTemplate(item);
+      setQuickAddQty(item.default_qty || 1);
+      setQuickAddShelfLife(item.default_shelf_life_days);
+      setQuickAddLocation("other");
+      setIsQuickAdding(false);
+      setQuickAddModalVisible(true);
+    },
+    [],
+  );
+
+  const handleQuickAddConfirm = async () => {
+    if (!selectedTemplate) return;
+
+    const doSave = async () => {
+      try {
+        setIsQuickAdding(true);
+        const calculatedExpiry = dayjs().add(quickAddShelfLife, "day").format("YYYY-MM-DD");
+        await dispatch(
+          createProductAsync({
+            name: selectedTemplate.name,
+            category: selectedTemplate.category,
+            qty: quickAddQty,
+            expiryDate: calculatedExpiry,
+            storageLocation: quickAddLocation,
+            imageUrl: selectedTemplate.image_url || "",
+          })
+        ).unwrap();
+
+        await dispatch(trackTemplateUsageAsync(selectedTemplate.id)).unwrap();
+        toast.success(`"${selectedTemplate.name}" added successfully!`);
+        setQuickAddModalVisible(false);
+        setSelectedTemplate(null);
+      } catch (error: any) {
+        console.error("Failed to quick add staple product", error);
+        toast.error(error.message || "Failed to add staple product.");
+      } finally {
+        setIsQuickAdding(false);
+      }
+    };
+
+    try {
+      admobService.showInterstitialAd(doSave);
+    } catch (adError) {
+      console.warn("Failed to show AdMob Ad, saving immediately:", adError);
+      await doSave();
+    }
+  };
+
+  const handleQuickAddCustomize = () => {
+    if (!selectedTemplate) return;
+    const temp = selectedTemplate;
+    setQuickAddModalVisible(false);
+    setSelectedTemplate(null);
+    router.push({
+      pathname: "/addProduct",
+      params: {
+        templateId: temp.id,
+        templateName: temp.name,
+        templateCategory: temp.category,
+        templateQty: quickAddQty.toString(),
+        templateShelfLife: quickAddShelfLife.toString(),
+        templateImageUrl: temp.image_url || "",
+      },
+    });
+  };
+
+  const productActions = generateProductActions(products, dismissedIds);
+
+  React.useEffect(() => {
+    if (focus !== "today-actions" || productActions.length === 0) return;
+
+    const timeout = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(todaysActionsY - 20, 0),
+        animated: true,
+      });
+      router.replace("/");
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [focus, productActions.length, todaysActionsY, router]);
 
   const expiringSoon = activeProducts.filter((p) => p.status === "warning");
   const recentlyAdded = activeProducts.slice(-3).reverse();
@@ -103,6 +280,17 @@ export default function HomeScreen() {
       : activeProducts
         .filter((product) => product.status === allProductsFilter)
         .slice(0, 5);
+
+  const getAllProductsRemainingLabel = React.useCallback((expiryDate: string) => {
+    const compact = formatRemainingTime(expiryDate, false);
+
+    if (compact === "Expired") return "Expired";
+    if (compact.includes("left")) {
+      return compact.replace("left", "remaining").trim();
+    }
+
+    return compact;
+  }, []);
 
   const renderDescription = (desc: string) => {
     // Basic keyword highlighting logic
@@ -225,10 +413,68 @@ export default function HomeScreen() {
     const createdLabel = item.created_at
       ? dayjs(item.created_at).fromNow()
       : "Recently tracked";
-    const progressWidth = `${Math.max(
-      8,
-      Math.min(100, ((item.daysLeft || 0) / 30) * 100),
-    )}%` as DimensionValue;
+
+    if (variant === "default") {
+      return (
+        <TouchableOpacity
+          key={item.id}
+          style={styles.allProductShowcaseCard}
+          activeOpacity={0.82}
+          onPress={() =>
+            router.push({
+              pathname: "/product/[id]",
+              params: { id: item.id },
+            })
+          }
+        >
+          <View
+            style={[styles.allProductImageWrap, { backgroundColor: statusBg }]}
+          >
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.allProductImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={{ fontSize: 34 }}>{getEmoji(item.category)}</Text>
+            )}
+          </View>
+
+          <View style={styles.allProductContent}>
+            <Text style={styles.allProductName} numberOfLines={2}>
+              {item.name}
+            </Text>
+
+            <View style={styles.allProductMetaRow}>
+              <Text style={styles.allProductMetaText} numberOfLines={1}>
+                {item.category}
+              </Text>
+              <Text style={styles.allProductMetaDot}>|</Text>
+              <Text
+                style={[
+                  styles.allProductMetaText,
+                  { color: getZoneColor(item.storageLocation) },
+                ]}
+                numberOfLines={1}
+              >
+                {getZoneLabel(item.storageLocation)}
+              </Text>
+            </View>
+
+            <View style={styles.allProductBottomRow}>
+              <View style={styles.allProductTimeMeta}>
+                <Timer size={14} color={theme.colors.textSecondary} />
+                <Text style={styles.allProductTimeText} numberOfLines={1}>
+                  {getAllProductsRemainingLabel(item.expiryDate)}
+                </Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textSecondary} />
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
 
     return (
       <TouchableOpacity
@@ -290,7 +536,7 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-         
+
         </View>
 
         <View style={styles.rightMeta}>
@@ -351,9 +597,11 @@ export default function HomeScreen() {
         <Text style={styles.recentCardName} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={styles.recentCardCategory} numberOfLines={1}>
-          {item.category}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
+          <Text style={[styles.recentCardCategory, { marginBottom: 0 }]} numberOfLines={1}>
+            {item.category}
+          </Text>
+        </View>
         <View style={styles.recentCardFooter}>
           <Text style={styles.recentCardTime} numberOfLines={1}>
             {createdLabel}
@@ -371,6 +619,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -385,10 +634,15 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>{getTimeBasedGreeting()} 👋</Text>
-            <Text style={styles.appName}>{user?.username || "Friend"}</Text>
+            <Text style={styles.appName}>Expirely</Text>
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              onPress={() => router.push("/household")}
+            >
+              <House size={22} color={theme.colors.text} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.notificationBtn}
               onPress={() => router.push("/scanner")}
@@ -483,10 +737,10 @@ export default function HomeScreen() {
             <View style={styles.heroCopy}>
               <Text style={styles.heroLabel}>Dashboard</Text>
               <Text style={styles.heroTitle}>
-                {activeProducts.length} active items
+                {activeProducts.length > 0 ? activeProducts.length : "No"} active items
               </Text>
               <Text style={styles.heroSubtitle}>
-                {totalCategories} {totalCategories === 1 ? "category" : "categories"} tracked
+                {totalCategories > 0 ? totalCategories : "No"} {totalCategories === 1 ? "category" : "categories"} tracked
               </Text>
             </View>
             <View style={styles.heroIcon}>
@@ -537,7 +791,7 @@ export default function HomeScreen() {
             <View style={[styles.quickActionIcon, { backgroundColor: "#EFF6FF" }]}>
               <Scan size={18} color="#2563EB" />
             </View>
-            <Text style={styles.quickActionText}>Scan</Text>
+            <Text style={styles.quickActionText}>Barcode</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
@@ -555,6 +809,73 @@ export default function HomeScreen() {
             <Text style={styles.quickActionText}>Review</Text>
           </TouchableOpacity>
         </View>
+
+        <View onLayout={(event) => setTodaysActionsY(event.nativeEvent.layout.y)}>
+          <TodaysActions
+            actions={productActions}
+            onMarkUsed={handleMarkUsed}
+            onDismiss={handleDismissAction}
+            onView={handleViewProduct}
+          />
+        </View>
+
+        {/* Quick Add Staples Section */}
+        {templates && templates.length > 0 && (
+          <>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionTitleCluster}>
+                <Text style={styles.sectionTitle}>Quick Add Staples</Text>
+                <View style={styles.sectionCountPill}>
+                  <Text style={styles.sectionCountText}>{templates.length}</Text>
+                </View>
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.staplesScroll}
+              style={styles.staplesList}
+              nestedScrollEnabled={true}
+              decelerationRate="fast"
+              snapToInterval={142}
+              snapToAlignment="start"
+            >
+              {templates.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.stapleCard}
+                  activeOpacity={0.8}
+                  onPress={() => handleStaplePress(item)}
+                >
+                  <View style={styles.stapleIconBg}>
+                    {item.image_url ? (
+                      <Image
+                        source={{ uri: item.image_url }}
+                        style={styles.stapleThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={{ fontSize: 24 }}>{getEmoji(item.category)}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.stapleName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.stapleFooter}>
+                    <Text style={styles.stapleShelfLife}>
+                      {item.default_shelf_life_days}d shelf
+                    </Text>
+                    {item.default_qty > 1 && (
+                      <View style={styles.stapleQtyBadge}>
+                        <Text style={styles.stapleQtyText}>x{item.default_qty}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Conditionally Render Sections or Empty State */}
         {loading && activeProducts.length === 0 ? (
@@ -609,6 +930,7 @@ export default function HomeScreen() {
                     <Text style={styles.seeAll}>See all</Text>
                   </TouchableOpacity>
                 </View>
+                {/* <View style={{ width: "100%", height: 1, backgroundColor: theme.colors.border, marginVertical: 2, marginBottom: 10 }} /> */}
                 <FlatList
                   data={expiringSoon}
                   renderItem={renderExpiringItem}
@@ -616,6 +938,10 @@ export default function HomeScreen() {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   style={styles.expiringList}
+                  nestedScrollEnabled={true}
+                  decelerationRate="fast"
+                  snapToInterval={166}
+                  snapToAlignment="start"
                 />
               </>
             )}
@@ -645,6 +971,10 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recentProductsRow}
+              nestedScrollEnabled={true}
+              decelerationRate="fast"
+              snapToInterval={176}
+              snapToAlignment="start"
             >
               {recentlyAdded.map((item) => renderRecentProductCard(item))}
             </ScrollView>
@@ -718,6 +1048,8 @@ export default function HomeScreen() {
                 );
               })}
             </ScrollView>
+            <View style={{ width: "100%", height: 1, backgroundColor: theme.colors.border, marginVertical: 2, marginBottom: 10 }} />
+
             {allProducts.length > 0 ? (
               <View style={styles.verticalList}>
                 {allProducts.map((item) => renderProductItem(item))}
@@ -733,10 +1065,213 @@ export default function HomeScreen() {
             )}
           </>
         )}
+        {/* Custom Quick Add Staple Modal */}
+        <Modal
+          visible={quickAddModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {
+            if (isQuickAdding) return;
+            setQuickAddModalVisible(false);
+            setSelectedTemplate(null);
+          }}
+        >
+          <View style={styles.quickAddModalOverlay}>
+            <TouchableOpacity
+              style={styles.quickAddModalBackdrop}
+              activeOpacity={1}
+              onPress={() => {
+                if (isQuickAdding) return;
+                setQuickAddModalVisible(false);
+                setSelectedTemplate(null);
+              }}
+            />
+            <View style={styles.quickAddModalContent}>
+              {selectedTemplate && (
+                <>
+                  <View style={styles.quickAddModalHeader}>
+                    <Text style={styles.quickAddModalTitle}>Quick Add Staple</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setQuickAddModalVisible(false);
+                        setSelectedTemplate(null);
+                      }}
+                      style={[styles.quickAddCloseBtn, isQuickAdding && { opacity: 0.3 }]}
+                      disabled={isQuickAdding}
+                    >
+                      <X size={20} color={theme.colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.quickAddModalHero}>
+                    <View style={styles.quickAddEmojiContainer}>
+                      {selectedTemplate.image_url ? (
+                        <Image
+                          source={{ uri: selectedTemplate.image_url }}
+                          style={styles.quickAddHeroImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={{ fontSize: 36 }}>{getEmoji(selectedTemplate.category)}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.quickAddTemplateName}>{selectedTemplate.name}</Text>
+                    <Text style={styles.quickAddTemplateCategory}>{selectedTemplate.category}</Text>
+                  </View>
+
+                  {/* Quantity adjustment */}
+                  <View style={styles.quickAddModalRow}>
+                    <View>
+                      <Text style={styles.quickAddRowLabel}>Quantity</Text>
+                      <Text style={styles.quickAddRowSub}>How many units?</Text>
+                    </View>
+                    <View style={[styles.quickAddQtySelector, isQuickAdding && { opacity: 0.5 }]}>
+                      <TouchableOpacity
+                        style={styles.quickAddQtyBtn}
+                        onPress={() => setQuickAddQty(Math.max(1, quickAddQty - 1))}
+                        disabled={isQuickAdding}
+                      >
+                        <Minus size={16} color={theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                      <Text style={styles.quickAddQtyText}>{quickAddQty}</Text>
+                      <TouchableOpacity
+                        style={styles.quickAddQtyBtn}
+                        onPress={() => setQuickAddQty(quickAddQty + 1)}
+                        disabled={isQuickAdding}
+                      >
+                        <Plus size={16} color={theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Shelf life days adjustment */}
+                  <View style={styles.quickAddModalRow}>
+                    <View>
+                      <Text style={styles.quickAddRowLabel}>Shelf Life</Text>
+                      <Text style={styles.quickAddRowSub}>
+                        Expires: {dayjs().add(quickAddShelfLife, "day").format("MMM D, YYYY")}
+                      </Text>
+                    </View>
+                    <View style={[styles.quickAddQtySelector, isQuickAdding && { opacity: 0.5 }]}>
+                      <TouchableOpacity
+                        style={styles.quickAddQtyBtn}
+                        onPress={() => setQuickAddShelfLife(Math.max(1, quickAddShelfLife - 1))}
+                        disabled={isQuickAdding}
+                      >
+                        <Minus size={16} color={theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                      <Text style={styles.quickAddQtyText}>{quickAddShelfLife}d</Text>
+                      <TouchableOpacity
+                        style={styles.quickAddQtyBtn}
+                        onPress={() => setQuickAddShelfLife(quickAddShelfLife + 1)}
+                        disabled={isQuickAdding}
+                      >
+                        <Plus size={16} color={theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Storage Location selector */}
+                  <View style={styles.quickAddLocationSection}>
+                    <Text style={styles.quickAddLocationLabel}>Storage Zone</Text>
+                    <View style={styles.quickAddLocationChips}>
+                      {[
+                        { value: "fridge", label: "Fridge", icon: Thermometer, color: "#3B82F6" },
+                        { value: "freezer", label: "Freezer", icon: Snowflake, color: "#06B6D4" },
+                        { value: "pantry", label: "Pantry", icon: Package, color: "#F59E0B" },
+                        { value: "medicine_box", label: "Medicine", icon: Activity, color: "#10B981" },
+                        { value: "other", label: "Other", icon: HelpCircle, color: "#64748B" },
+                      ].map((zone) => {
+                        const isSelected = quickAddLocation === zone.value;
+                        const Icon = zone.icon;
+                        return (
+                          <TouchableOpacity
+                            key={zone.value}
+                            style={[
+                              styles.quickAddZoneChip,
+                              isSelected && { borderColor: zone.color, backgroundColor: zone.color + "14" },
+                              isQuickAdding && { opacity: 0.5 },
+                            ]}
+                            onPress={() => setQuickAddLocation(zone.value as any)}
+                            disabled={isQuickAdding}
+                          >
+                            <Icon size={12} color={isSelected ? zone.color : theme.colors.textSecondary} />
+                            <Text
+                              style={[
+                                styles.quickAddZoneChipText,
+                                isSelected && { color: zone.color, fontWeight: "900" },
+                              ]}
+                            >
+                              {zone.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Action buttons */}
+                  <View style={styles.quickAddModalActions}>
+                    <TouchableOpacity
+                      style={[styles.quickAddCustomizeBtn, isQuickAdding && { opacity: 0.5 }]}
+                      onPress={handleQuickAddCustomize}
+                      disabled={isQuickAdding}
+                    >
+                      <Text style={styles.quickAddCustomizeBtnText}>Customize</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.quickAddPrimaryBtn, isQuickAdding && { opacity: 0.8 }]}
+                      onPress={handleQuickAddConfirm}
+                      disabled={isQuickAdding}
+                    >
+                      {isQuickAdding ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.quickAddPrimaryBtnText}>Quick Add</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   );
 }
+
+const getZoneColor = (zone?: string) => {
+  switch (zone) {
+    case "fridge":
+      return "#3B82F6";
+    case "freezer":
+      return "#06B6D4";
+    case "pantry":
+      return "#F59E0B";
+    case "medicine_box":
+      return "#10B981";
+    case "other":
+    default:
+      return "#64748B";
+  }
+};
+
+const getZoneLabel = (zone?: string) => {
+  switch (zone) {
+    case "fridge":
+      return "Fridge";
+    case "freezer":
+      return "Freezer";
+    case "pantry":
+      return "Pantry";
+    case "medicine_box":
+      return "Med";
+    case "other":
+    default:
+      return "Other";
+  }
+};
 
 const getEmoji = (category: string) => {
   switch (category.toLowerCase()) {

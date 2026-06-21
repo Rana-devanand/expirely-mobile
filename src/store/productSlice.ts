@@ -70,7 +70,9 @@ export const createProductAsync = createAsyncThunk(
       };
 
       // Schedule notification for this new product
-      ExpiryNotificationService.scheduleExpiryNotifications(result as Product);
+      await ExpiryNotificationService.scheduleExpiryNotifications(
+        result as Product,
+      );
 
       return result;
     } catch (error: any) {
@@ -103,9 +105,11 @@ export const updateProductAsync = createAsyncThunk(
 
       // Reschedule notifications for the updated product
       if (!result.isConsumed && dayjs(result.expiryDate).isAfter(dayjs())) {
-        ExpiryNotificationService.scheduleExpiryNotifications(
+        await ExpiryNotificationService.scheduleExpiryNotifications(
           result as Product,
         );
+      } else {
+        await ExpiryNotificationService.clearProductNotifications(result.id);
       }
 
       return result;
@@ -120,6 +124,7 @@ export const deleteProductAsync = createAsyncThunk(
   async (id: string, { rejectWithValue }) => {
     try {
       await productService.deleteProduct(id);
+      await ExpiryNotificationService.clearProductNotifications(id);
       return id;
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to delete product");

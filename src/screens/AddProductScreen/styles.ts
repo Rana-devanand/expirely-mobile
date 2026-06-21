@@ -297,6 +297,56 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
     },
     qtyValue: {
       fontSize: 20,
+      padding: 12,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    // Image Source Modal Styles
+    sourceModalContainer: {
+      width: "100%",
+      backgroundColor: isDarkMode ? "#1E293B" : theme.colors.card,
+      borderRadius: 24,
+      padding: 24,
+      gap: 16,
+    },
+    sourceOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
+      borderRadius: 16,
+      gap: 12,
+    },
+    sourceOptionText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+    },
+    destructiveText: {
+      color: "#EF4444",
+    },
+    // New Styles for Quantity and Notes
+    qtyContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 20,
+      marginTop: 4,
+    },
+    quantityLabel:{
+      marginTop: 20,
+    },
+    qtyButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: isDarkMode ? "#151C2C" : "#EFF7F2",
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    qtyValue: {
+      fontSize: 20,
       fontWeight: "bold",
       color: theme.colors.text,
       minWidth: 30,
@@ -306,5 +356,25 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       height: 80,
       textAlignVertical: "center",
       paddingTop: 0,
+    },
+    zoneScrollContainer: {
+      paddingVertical: 4,
+      gap: 10,
+    },
+    zoneChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.card,
+      gap: 8,
+    },
+    zoneChipText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.colors.textSecondary,
     },
   });

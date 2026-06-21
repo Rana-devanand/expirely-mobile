@@ -29,7 +29,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       alignItems: "center",
     },
     title: {
-      fontSize: 32,
+      fontSize: 24,
       fontWeight: "bold",
       color: theme.colors.text,
     },
@@ -87,7 +87,7 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       color: theme.colors.text,
     },
     activeFilterText: {
-      color: "#000",
+      color: "#FFF",
     },
     statsLine: {
       flexDirection: "row",
@@ -176,48 +176,81 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       gap: 12,
     },
 
-    // Compact Product Card
+    // Product Card
     productCard: {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.colors.card,
-      borderRadius: 20,
-      padding: 12,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: theme.colors.border,
+      overflow: "hidden",
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: isDarkMode ? 0 : 0.05,
+      shadowRadius: 14,
+      elevation: isDarkMode ? 0 : 2,
     },
     imageContainer: {
-      width: 56,
-      height: 56,
-      borderRadius: 12,
-      backgroundColor: isDarkMode ? "#1A2234" : "#EFF7F2",
+      width: 136,
+      height: 112,
       justifyContent: "center",
       alignItems: "center",
-      marginRight: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderTopLeftRadius: 21,
+      borderBottomLeftRadius: 21,
+    },
+    productImage: {
+      width: "100%",
+      height: "100%",
     },
     productInfo: {
       flex: 1,
+      minHeight: 112,
+      paddingLeft: 14,
+      paddingRight: 12,
+      paddingVertical: 12,
+      justifyContent: "space-between",
     },
     productName: {
       fontSize: 16,
-      fontWeight: "bold",
+      lineHeight: 23,
+      fontWeight: "800",
       color: theme.colors.text,
-      marginBottom: 2,
     },
-    productCategory: {
+    productMetaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
+    productMetaText: {
       fontSize: 12,
+      fontWeight: "700",
       color: theme.colors.textSecondary,
     },
-    expiryBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 10,
+    productMetaDot: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.textSecondary,
     },
-    expiryBadgeText: {
-      fontSize: 11,
-      fontWeight: "bold",
+    productBottomRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 10,
+    },
+    productTimeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    productTimeText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.colors.textSecondary,
+    },
+    productChevron: {
+      marginRight: 12,
     },
 
     // Modal Styles

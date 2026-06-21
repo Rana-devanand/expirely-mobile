@@ -36,6 +36,11 @@ import {
   ChevronDown,
   Plus,
   Minus,
+  Snowflake,
+  Package,
+  Activity,
+  HelpCircle,
+  Thermometer,
 } from "lucide-react-native";
 import { getStyles } from "./styles";
 import dayjs from "dayjs";
@@ -62,7 +67,7 @@ export default function AddProductScreen() {
   const { categories, loading: categoriesLoading } = useSelector(
     (state: RootState) => state.category,
   );
-  const { id, scannedName, scannedBarcode, scannedImageUrl, scannedCategory, scannedExpiryDate, scannedIngredients } =
+  const { id, scannedName, scannedBarcode, scannedImageUrl, scannedCategory, scannedExpiryDate, scannedIngredients, templateId, templateName, templateCategory, templateQty, templateShelfLife, templateImageUrl } =
     useLocalSearchParams<{
       id: string;
       scannedName?: string;
@@ -71,6 +76,12 @@ export default function AddProductScreen() {
       scannedCategory?: string;
       scannedExpiryDate?: string;
       scannedIngredients?: string;
+      templateId?: string;
+      templateName?: string;
+      templateCategory?: string;
+      templateQty?: string;
+      templateShelfLife?: string;
+      templateImageUrl?: string;
     }>();
   const isEditMode = !!id;
   const existingProduct = useSelector((state: RootState) =>
@@ -88,6 +99,9 @@ export default function AddProductScreen() {
   const [notes, setNotes] = useState("");
   const [ingredients, setIngredients] = useState("");
   const [barcode, setBarcode] = useState("");
+  const [storageLocation, setStorageLocation] = useState<"fridge" | "freezer" | "pantry" | "medicine_box" | "other">("other");
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [shelfLifeDays, setShelfLifeDays] = useState(7);
 
   const { takePhoto, pickImage } = useImagePicker();
 
@@ -101,6 +115,16 @@ export default function AddProductScreen() {
       setQty(existingProduct.qty || 1);
       setNotes(existingProduct.notes || "");
       setBarcode(existingProduct.barcode || "");
+      setStorageLocation(existingProduct.storageLocation || "other");
+    } else if (templateId) {
+      if (templateName) setName(templateName);
+      if (templateCategory) setCategory(templateCategory);
+      if (templateQty) setQty(Number(templateQty) || 1);
+      if (templateImageUrl) setProductImage(templateImageUrl);
+      if (templateShelfLife) {
+        const days = Number(templateShelfLife);
+        setExpiryDate(dayjs().add(days, "day").format("YYYY-MM-DD"));
+      }
     } else if (scannedName || scannedBarcode) {
       if (scannedName) setName(scannedName);
       if (scannedBarcode) setBarcode(scannedBarcode);
@@ -111,6 +135,12 @@ export default function AddProductScreen() {
   }, [
     isEditMode,
     existingProduct,
+    templateId,
+    templateName,
+    templateCategory,
+    templateQty,
+    templateShelfLife,
+    templateImageUrl,
     scannedName,
     scannedBarcode,
     scannedImageUrl,
@@ -125,7 +155,6 @@ export default function AddProductScreen() {
 
     try {
       setIsAIAnalyzing(true);
-      // Convert image to base64 for Groq Vision
       const response = await fetch(uri);
       const blob = await response.blob();
       const reader = new FileReader();
@@ -133,7 +162,7 @@ export default function AddProductScreen() {
       const base64Promise = new Promise<string>((resolve) => {
         reader.onloadend = () => {
           const base64data = reader.result as string;
-          resolve(base64data.split(",")[1]); // Remove data:image... prefix
+          resolve(base64data.split(",")[1]);
         };
       });
       reader.readAsDataURL(blob);
@@ -229,6 +258,7 @@ export default function AddProductScreen() {
                 ingredients,
                 qty,
                 barcode,
+                storageLocation,
               },
             }),
           ).unwrap();
@@ -245,8 +275,27 @@ export default function AddProductScreen() {
               ingredients,
               qty,
               barcode,
+              storageLocation,
             }),
           ).unwrap();
+
+          if (saveAsTemplate) {
+            try {
+              const { createTemplateAsync } = await import("../../store/recurringSlice");
+              await dispatch(
+                createTemplateAsync({
+                  name,
+                  category,
+                  default_qty: qty,
+                  default_shelf_life_days: shelfLifeDays,
+                  image_url: finalImageUrl,
+                })
+              ).unwrap();
+            } catch (err) {
+              console.error("Failed to auto-create recurring template:", err);
+            }
+          }
+
           toast.success("Product saved successfully!");
         }
         router.back();
@@ -255,7 +304,6 @@ export default function AddProductScreen() {
       }
     };
 
-    // Show Interstitial Ad before saving, fallback to save immediately if ad not loaded/offline
     try {
       admobService.showInterstitialAd(saveProductLogic);
     } catch (adError) {
@@ -489,7 +537,6 @@ export default function AddProductScreen() {
               </Text>
             </View>
 
-
             <TouchableOpacity
               style={[
                 styles.uploadContainer,
@@ -680,6 +727,55 @@ export default function AddProductScreen() {
                 </View>
               </View>
 
+              {/* Storage Location Picker */}
+              <View style={styles.inputGroup}>
+                <Text
+                  style={[
+                    styles.label,
+                    isDarkMode && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Storage Zone
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.zoneScrollContainer}
+                >
+                  {[
+                    { value: "fridge", label: "Fridge", icon: Thermometer, color: "#3B82F6" },
+                    { value: "freezer", label: "Freezer", icon: Snowflake, color: "#06B6D4" },
+                    { value: "pantry", label: "Pantry", icon: Package, color: "#F59E0B" },
+                    { value: "medicine_box", label: "Medicine", icon: Activity, color: "#10B981" },
+                    { value: "other", label: "Other", icon: HelpCircle, color: "#64748B" },
+                  ].map((zone) => {
+                    const isSelected = storageLocation === zone.value;
+                    const Icon = zone.icon;
+                    return (
+                      <TouchableOpacity
+                        key={zone.value}
+                        style={[
+                          styles.zoneChip,
+                          isSelected && { borderColor: zone.color, backgroundColor: zone.color + "12" },
+                        ]}
+                        onPress={() => setStorageLocation(zone.value as any)}
+                        activeOpacity={0.7}
+                      >
+                        <Icon size={16} color={isSelected ? zone.color : theme.colors.textSecondary} />
+                        <Text
+                          style={[
+                            styles.zoneChipText,
+                            isSelected && { color: zone.color, fontWeight: "900" },
+                          ]}
+                        >
+                          {zone.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text
                   style={[
@@ -767,6 +863,73 @@ export default function AddProductScreen() {
                   />
                 </View>
               </View>
+
+              {!isEditMode && (
+                <View style={styles.inputGroup}>
+                  <TouchableOpacity
+                    style={{ flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 }}
+                    onPress={() => setSaveAsTemplate(!saveAsTemplate)}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: saveAsTemplate ? theme.colors.primary : theme.colors.border,
+                        backgroundColor: saveAsTemplate ? theme.colors.primary : "transparent",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      {saveAsTemplate && (
+                        <View
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: 2,
+                            backgroundColor: "#FFF",
+                          }}
+                        />
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: theme.colors.text }}>
+                      Save as Staple for Quick Add
+                    </Text>
+                  </TouchableOpacity>
+
+                  {saveAsTemplate && (
+                    <View style={{ marginTop: 8 }}>
+                      <Text
+                        style={[
+                          styles.label,
+                          isDarkMode && { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        Default Shelf Life (Days)
+                      </Text>
+                      <View style={styles.qtyContainer}>
+                        <TouchableOpacity
+                          style={styles.qtyButton}
+                          onPress={() => setShelfLifeDays(Math.max(1, shelfLifeDays - 1))}
+                          activeOpacity={0.7}
+                        >
+                          <Minus size={24} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                        <Text style={styles.qtyValue}>{shelfLifeDays}</Text>
+                        <TouchableOpacity
+                          style={styles.qtyButton}
+                          onPress={() => setShelfLifeDays(shelfLifeDays + 1)}
+                          activeOpacity={0.7}
+                        >
+                          <Plus size={24} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
 
               <TouchableOpacity
                 style={[

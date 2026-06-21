@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
-import { User } from "../types/auth";
+import { ReminderSettings, User } from "../types/auth";
 import { authService } from "../services/authService";
 import { userService } from "../services/user";
 import { storage } from "../services/storage";
@@ -124,6 +124,35 @@ export const changePasswordAsync = createAsyncThunk(
       }
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to change password");
+    }
+  },
+);
+
+export const updateReminderSettingsAsync = createAsyncThunk(
+  "auth/updateReminderSettings",
+  async (
+    data: ReminderSettings,
+    { dispatch, getState, rejectWithValue }: any,
+  ) => {
+    try {
+      const response = await userService.updateReminderSettings(data);
+      if (!response.success) {
+        return rejectWithValue(response.message || "Failed to update reminder settings");
+      }
+
+      const currentUser = (getState().auth.user || {}) as User;
+      const updatedUser: User = {
+        ...currentUser,
+        ...response.data,
+      };
+
+      await storage.saveUser(updatedUser);
+      dispatch(authSlice.actions.updateProfileSuccess(updatedUser));
+      return updatedUser;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.message || "Failed to update reminder settings",
+      );
     }
   },
 );

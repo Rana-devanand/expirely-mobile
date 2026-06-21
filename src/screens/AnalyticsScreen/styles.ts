@@ -140,6 +140,53 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       borderRadius: 24,
       padding: 24,
       flexDirection: "row",
+      borderRadius: 3,
+      marginTop: 6,
+      width: "100%",
+    },
+    progressBar: {
+      height: "100%",
+      borderRadius: 3,
+    },
+    // Grid Layout
+    statsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 16,
+      marginBottom: 20,
+    },
+    gridItem: {
+      width: (width - 56) / 2, // 20px padding left/right + 16px gap
+      padding: 20,
+      borderRadius: 24,
+      gap: 12,
+    },
+    gridIconBox: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+    },
+    gridValue: {
+      fontSize: 24,
+      fontWeight: "900",
+    },
+    gridTitle: {
+      fontSize: 14,
+      fontWeight: "bold",
+    },
+    gridSubtitle: {
+      fontSize: 12,
+      opacity: 0.7,
+    },
+    // Tip Banner
+    tipBanner: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 24,
+      padding: 24,
+      flexDirection: "row",
       alignItems: "center",
       gap: 16,
     },
@@ -151,5 +198,67 @@ export const getStyles = (theme: ThemeType, isDarkMode: boolean) =>
       fontSize: 16,
       fontWeight: "bold",
       lineHeight: 22,
+    },
+    // Waste Analytics styles
+    outcomeRateWrapper: {
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "#FEF2F2",
+      borderRadius: 24,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(239, 68, 68, 0.2)" : "#FEE2E2",
+      marginBottom: 20,
+    },
+    wastedRateTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: theme.colors.error,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 4,
+    },
+    wastedRateValue: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: theme.colors.error,
+    },
+    wastedRateSubtitle: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      fontWeight: "600",
+      marginTop: 4,
+      textAlign: "center",
+    },
+    wastedCategoryList: {
+      gap: 12,
+      marginTop: 8,
+    },
+    wastedCategoryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    wastedCategoryName: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: theme.colors.text,
+    },
+    wastedCategoryCount: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: theme.colors.textSecondary,
+    },
+    wastedCategoryTrack: {
+      height: 6,
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "#F1F5F9",
+      borderRadius: 3,
+      marginTop: 4,
+      width: "100%",
+    },
+    wastedCategoryFill: {
+      height: "100%",
+      borderRadius: 3,
+      backgroundColor: theme.colors.error,
     },
   });

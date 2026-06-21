@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Modal, Portal, Button } from "react-native-paper";
+import { Modal, Portal } from "react-native-paper";
 import { useGlobalModal } from "../hooks/useGlobalModal";
 import { useAppTheme } from "../hooks/useAppTheme";
 import { AlertTriangle, Info, CheckCircle2 } from "lucide-react-native";
@@ -17,6 +17,7 @@ export default function GlobalModal() {
     message,
     confirmText = "Confirm",
     cancelText = "Cancel",
+    hideCancel = false,
     onConfirm,
     onCancel,
     type = "info",
@@ -32,15 +33,37 @@ export default function GlobalModal() {
     hideModal();
   };
 
-  const getIcon = () => {
+  const getIconColor = () => {
     switch (type) {
       case "danger":
-        return <AlertTriangle color="#EF4444" size={32} />;
+        return "#EF4444";
       case "success":
-        return <CheckCircle2 color="#10B981" size={32} />;
+        return "#10B981";
       default:
-        return <Info color={theme.colors.primary} size={32} />;
+        return theme.colors.primary;
     }
+  };
+
+  const getIcon = () => {
+    const color = getIconColor();
+    switch (type) {
+      case "danger":
+        return <AlertTriangle color={color} size={28} />;
+      case "success":
+        return <CheckCircle2 color={color} size={28} />;
+      default:
+        return <Info color={color} size={28} />;
+    }
+  };
+
+  const getIconBg = () => {
+    if (type === "danger") {
+      return isDarkMode ? "rgba(239, 68, 68, 0.14)" : "#FEF2F2";
+    }
+    if (type === "success") {
+      return isDarkMode ? "rgba(16, 185, 129, 0.14)" : "#ECFDF5";
+    }
+    return isDarkMode ? "rgba(69, 209, 160, 0.14)" : "#EFF7F2";
   };
 
   return (
@@ -50,11 +73,17 @@ export default function GlobalModal() {
         onDismiss={handleCancel}
         contentContainerStyle={[
           styles.modalContainer,
-          { backgroundColor: theme.colors.card },
+          {
+            backgroundColor: theme.colors.card,
+            borderWidth: isDarkMode ? 1 : 0,
+            borderColor: theme.colors.border,
+          },
         ]}
       >
         <View style={styles.content}>
-          <View style={styles.iconContainer}>{getIcon()}</View>
+          <View style={[styles.iconContainer, { backgroundColor: getIconBg() }]}>
+            {getIcon()}
+          </View>
           <Text style={[styles.title, { color: theme.colors.text }]}>
             {title}
           </Text>
@@ -63,27 +92,29 @@ export default function GlobalModal() {
           </Text>
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.cancelButton,
-                {
-                  backgroundColor: isDarkMode
-                    ? "rgba(255,255,255,0.05)"
-                    : "#EFF7F2",
-                },
-              ]}
-              onPress={handleCancel}
-            >
-              <Text style={[styles.buttonText, { color: theme.colors.text }]}>
-                {cancelText}
-              </Text>
-            </TouchableOpacity>
+            {!hideCancel && (
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.cancelButton,
+                  {
+                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.03)" : "#F1F5F9",
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+                onPress={handleCancel}
+              >
+                <Text style={[styles.buttonText, { color: theme.colors.textSecondary }]}>
+                  {cancelText}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[
                 styles.button,
                 styles.confirmButton,
+                hideCancel && styles.singleButton,
                 {
                   backgroundColor:
                     type === "danger" ? "#EF4444" : theme.colors.primary,
@@ -104,28 +135,38 @@ export default function GlobalModal() {
 
 const styles = StyleSheet.create({
   modalContainer: {
-    margin: 20,
-    borderRadius: 24,
+    margin: 24,
+    borderRadius: 28,
     padding: 24,
-    elevation: 5,
+    elevation: 8,
+    alignSelf: "center",
+    width: "90%",
+    maxWidth: 340,
   },
   content: {
     alignItems: "center",
   },
   iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 19,
+    fontWeight: "800",
     marginBottom: 8,
     textAlign: "center",
+    letterSpacing: -0.2,
   },
   message: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
     marginBottom: 24,
-    lineHeight: 22,
+    lineHeight: 20,
+    fontWeight: "600",
   },
   actions: {
     flexDirection: "row",
@@ -135,15 +176,21 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   cancelButton: {},
   confirmButton: {},
+  singleButton: {
+    flex: 0,
+    width: "100%",
+  },
   buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "800",
   },
   confirmText: {
     color: "#FFFFFF",

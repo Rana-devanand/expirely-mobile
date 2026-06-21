@@ -209,8 +209,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0, 245, 212, 0.1)",
   },
   logo: {
-    width: 140,
-    height: 140,
+    width: 180,
+    height: 180,
   },
   textStack: {
     alignItems: "center",

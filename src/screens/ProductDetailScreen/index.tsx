@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   DimensionValue,
   View,
@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSelector, useDispatch } from "react-redux";
@@ -13,7 +16,13 @@ import { RootState, AppDispatch } from "../../store";
 import {
   deleteProductAsync,
   updateProductAsync,
+  fetchProductsAsync,
 } from "../../store/productSlice";
+import { addShoppingListItemAsync } from "../../store/shoppingSlice";
+import {
+  logUsageEventAsync,
+  fetchProductUsageEventsAsync,
+} from "../../store/usageSlice";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { useGlobalModal } from "../../hooks/useGlobalModal";
 import { getStyles } from "./styles";
@@ -31,9 +40,63 @@ import {
   CheckCircle2,
   StickyNote,
   ListChecks,
+  Plus,
+  Minus,
+  History,
+  Thermometer,
+  Snowflake,
+  Activity,
+  HelpCircle,
 } from "lucide-react-native";
-import { ActivityIndicator } from "react-native";
 import dayjs from "dayjs";
+
+const getZoneIcon = (location?: string) => {
+  switch (location) {
+    case "fridge":
+      return Thermometer;
+    case "freezer":
+      return Snowflake;
+    case "pantry":
+      return Package;
+    case "medicine_box":
+      return Activity;
+    case "other":
+    default:
+      return HelpCircle;
+  }
+};
+
+const getZoneColor = (location?: string) => {
+  switch (location) {
+    case "fridge":
+      return "#3B82F6";
+    case "freezer":
+      return "#06B6D4";
+    case "pantry":
+      return "#F59E0B";
+    case "medicine_box":
+      return "#10B981";
+    case "other":
+    default:
+      return "#64748B";
+  }
+};
+
+const getZoneLabel = (location?: string) => {
+  switch (location) {
+    case "fridge":
+      return "Fridge";
+    case "freezer":
+      return "Freezer";
+    case "pantry":
+      return "Pantry";
+    case "medicine_box":
+      return "Medicine";
+    case "other":
+    default:
+      return "Other";
+  }
+};
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -56,21 +119,87 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const { logs } = useSelector((state: RootState) => state.usage);
+
+  const [isUsageModalVisible, setIsUsageModalVisible] = useState(false);
+  const [usageType, setUsageType] = useState<"USED_FULLY" | "USED_PARTIALLY" | "WASTED">("USED_FULLY");
+  const [usageQty, setUsageQty] = useState(1);
+  const [usageNote, setUsageNote] = useState("");
+  const [loggingEvent, setLoggingEvent] = useState(false);
+
+  React.useEffect(() => {
+    dispatch(fetchProductUsageEventsAsync(product.id));
+  }, [dispatch, product.id]);
+
   const handleToggleConsumed = async () => {
+    if (!product.isConsumed) {
+      setIsUsageModalVisible(true);
+      return;
+    }
+
     try {
       await dispatch(
         updateProductAsync({
           id: product.id,
-          data: { isConsumed: !product.isConsumed },
-        }),
+          data: { isConsumed: false, qty: 1 },
+        })
       ).unwrap();
-      toast.success(
-        product.isConsumed
-          ? "Product marked as active"
-          : "Product marked as used",
-      );
+
+      await dispatch(fetchProductsAsync()).unwrap();
+      toast.success("Product marked as active");
     } catch (error) {
       toast.error("Failed to update product status");
+    }
+  };
+
+  const handleLogUsage = async () => {
+    try {
+      setLoggingEvent(true);
+      await dispatch(
+        logUsageEventAsync({
+          productId: product.id,
+          data: {
+            type: usageType,
+            quantity: usageType === "USED_PARTIALLY" ? usageQty : undefined,
+            note: usageNote.trim() || undefined,
+          },
+        })
+      ).unwrap();
+
+      await dispatch(fetchProductsAsync()).unwrap();
+
+      toast.success(
+        usageType === "USED_FULLY"
+          ? "Product marked as fully consumed"
+          : usageType === "WASTED"
+            ? "Product marked as wasted"
+            : "Logged partial consumption"
+      );
+
+      setIsUsageModalVisible(false);
+      setUsageNote("");
+      setUsageQty(1);
+
+      showModal({
+        title: "Add to Shopping List?",
+        message: `Would you like to add "${product.name}" to your shopping list to restock?`,
+        confirmText: "Add",
+        cancelText: "Cancel",
+        type: "success",
+        onConfirm: () => {
+          dispatch(
+            addShoppingListItemAsync({
+              name: product.name,
+              category: product.category,
+              qty: 1,
+            })
+          );
+        },
+      });
+    } catch (err) {
+      toast.error("Failed to log product usage");
+    } finally {
+      setLoggingEvent(false);
     }
   };
 
@@ -94,8 +223,8 @@ export default function ProductDetailScreen() {
   const formattedAddedOn = product.created_at
     ? dayjs(product.created_at).format("MMM D, YYYY")
     : dayjs(product.expiryDate)
-        .subtract(product.daysLeft, "day")
-        .format("MMM D, YYYY");
+      .subtract(product.daysLeft, "day")
+      .format("MMM D, YYYY");
   const formattedExpiry = dayjs(product.expiryDate).format("MMM D, YYYY");
   const statusColor =
     product.status === "expired"
@@ -175,15 +304,20 @@ export default function ProductDetailScreen() {
           )}
         </View>
 
-        <Text style={styles.title}>{product.name}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-          <Text style={styles.statusText}>
-            {product.isConsumed ? "USED" : product.status.toUpperCase()}
-          </Text>
-        </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={2}>
+            {product.name}
+          </Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+            <Text style={styles.statusText}>
+              {product.isConsumed ? "USED" : product.status.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.countdownCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
@@ -231,7 +365,11 @@ export default function ProductDetailScreen() {
               <Package size={18} color={theme.colors.warning} />
             </View>
             <Text style={styles.gridLabel}>Quantity</Text>
-            <Text style={styles.gridValue}>{product.qty || 1}</Text>
+            <Text style={styles.gridValue}>
+              {product.remainingQty !== undefined && product.remainingQty !== product.qty
+                ? `${product.remainingQty} / ${product.qty || 1}`
+                : (product.qty || 1)}
+            </Text>
           </View>
 
           <View style={styles.gridItem}>
@@ -249,6 +387,21 @@ export default function ProductDetailScreen() {
             <Text style={styles.gridLabel}>Expires On</Text>
             <Text style={styles.gridValue}>{formattedExpiry}</Text>
           </View>
+
+          {product.storageLocation && (
+            <View style={styles.gridItem}>
+              <View style={styles.gridIconBox}>
+                {React.createElement(getZoneIcon(product.storageLocation), {
+                  size: 18,
+                  color: getZoneColor(product.storageLocation),
+                })}
+              </View>
+              <Text style={styles.gridLabel}>Storage Zone</Text>
+              <Text style={[styles.gridValue, { color: getZoneColor(product.storageLocation), fontWeight: "900" }]}>
+                {getZoneLabel(product.storageLocation)}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.notesCard}>
@@ -281,19 +434,64 @@ export default function ProductDetailScreen() {
             </View>
           </View>
         ) : null}
+
+        {/* Usage History Timeline */}
+        <View style={styles.historyCard}>
+          <View style={styles.notesHeader}>
+            <History size={18} color={theme.colors.primary} />
+            <Text style={styles.notesLabel}>Usage History</Text>
+          </View>
+          {logs.length === 0 ? (
+            <Text style={styles.notesText}>No usage events logged for this product.</Text>
+          ) : (
+            logs.map((log, index) => {
+              const dotColor =
+                log.type === "USED_FULLY"
+                  ? theme.colors.success
+                  : log.type === "WASTED"
+                    ? theme.colors.error
+                    : theme.colors.primary;
+
+              const outcomeLabel =
+                log.type === "USED_FULLY"
+                  ? "Fully Consumed"
+                  : log.type === "WASTED"
+                    ? "Wasted / Expired"
+                    : `Partially Used (${log.quantity} units)`;
+
+              return (
+                <View key={log.id} style={styles.historyItem}>
+                  <View style={styles.historyLeft}>
+                    <View style={[styles.historyDot, { backgroundColor: dotColor }]} />
+                    {index < logs.length - 1 && <View style={styles.historyLine} />}
+                  </View>
+                  <View style={styles.historyRight}>
+                    <View style={styles.historyHeader}>
+                      <Text style={styles.historyAction}>{outcomeLabel}</Text>
+                      <Text style={styles.historyDate}>
+                        {dayjs(log.created_at).format("MMM D, h:mm A")}
+                      </Text>
+                    </View>
+                    {log.note ? <Text style={styles.historyNote}>"{log.note}"</Text> : null}
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
 
       {/* Footer Buttons */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.editBtn, loading && { opacity: 0.7 }, product.daysLeft < 0 && { opacity: 0.4 }]}
+          style={[styles.editBtn, loading && { opacity: 0.7 }]}
           onPress={() =>
             router.push({
               pathname: "/addProduct",
               params: { id: product.id },
             })
           }
-          disabled={loading || product.daysLeft < 0}
+          disabled={loading}
         >
           <Pencil size={20} color={theme.colors.text} />
           <Text style={styles.editBtnText}>Edit</Text>
@@ -316,6 +514,143 @@ export default function ProductDetailScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Usage Options Modal */}
+      <Modal
+        visible={isUsageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsUsageModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>How did you use this?</Text>
+
+            <View style={styles.optionsList}>
+              {/* Option: Fully Consumed */}
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  usageType === "USED_FULLY" && styles.optionCardSelected,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUsageType("USED_FULLY")}
+              >
+                <View style={[styles.optionIconContainer, { backgroundColor: theme.colors.success + "14" }]}>
+                  <CheckCircle2 size={20} color={theme.colors.success} />
+                </View>
+                <View style={styles.optionTextWrap}>
+                  <Text style={styles.optionLabel}>Used Fully</Text>
+                  <Text style={styles.optionDesc}>Mark item as 100% consumed</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Option: Partially Consumed */}
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  usageType === "USED_PARTIALLY" && styles.optionCardSelected,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setUsageType("USED_PARTIALLY");
+                  const initialQty = product.remainingQty !== undefined ? product.remainingQty : (product.qty || 1);
+                  setUsageQty(Math.max(1, Math.min(1, initialQty)));
+                }}
+              >
+                <View style={[styles.optionIconContainer, { backgroundColor: theme.colors.primary + "14" }]}>
+                  <Plus size={20} color={theme.colors.primary} />
+                </View>
+                <View style={styles.optionTextWrap}>
+                  <Text style={styles.optionLabel}>Used Partially</Text>
+                  <Text style={styles.optionDesc}>Consume a portion of the product</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Option: Wasted */}
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  usageType === "WASTED" && styles.optionCardSelected,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUsageType("WASTED")}
+              >
+                <View style={[styles.optionIconContainer, { backgroundColor: theme.colors.error + "14" }]}>
+                  <Trash2 size={20} color={theme.colors.error} />
+                </View>
+                <View style={styles.optionTextWrap}>
+                  <Text style={styles.optionLabel}>Wasted / Expired</Text>
+                  <Text style={styles.optionDesc}>Log item as thrown away or expired</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quantity Adjuster for Partial consumption */}
+            {usageType === "USED_PARTIALLY" && (
+              <View>
+                <Text style={styles.qtySelectorTitle}>Quantity to Consume</Text>
+                <View style={styles.qtySelectorRow}>
+                  <TouchableOpacity
+                    style={styles.qtyBtn}
+                    onPress={() => setUsageQty(Math.max(0.1, Number((usageQty - 0.5).toFixed(1))))}
+                  >
+                    <Minus size={16} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyInput}>
+                    {usageQty} unit{usageQty !== 1 ? "s" : ""}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.qtyBtn}
+                    onPress={() => {
+                      const maxLimit = product.remainingQty !== undefined ? product.remainingQty : (product.qty || 1);
+                      setUsageQty(Math.min(maxLimit, Number((usageQty + 0.5).toFixed(1))));
+                    }}
+                  >
+                    <Plus size={16} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Note text field */}
+            <Text style={styles.qtySelectorTitle}>Usage Note (Optional)</Text>
+            <View style={styles.noteInputWrapper}>
+              <TextInput
+                style={styles.noteTextInput}
+                placeholder="e.g., made soup, expired, sour..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={usageNote}
+                onChangeText={setUsageNote}
+                maxLength={100}
+                multiline
+              />
+            </View>
+
+            {/* Actions */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setIsUsageModalVisible(false)}
+                disabled={loggingEvent}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={handleLogUsage}
+                disabled={loggingEvent}
+              >
+                {loggingEvent ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.modalConfirmBtnText}>Confirm</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

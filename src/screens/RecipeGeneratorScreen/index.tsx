@@ -27,6 +27,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { api } from "../../services/api";
 import { Product } from "../../types";
+import AIEmptyInventoryState from "../../components/AIEmptyInventoryState";
 
 type Recipe = {
   title: string;
@@ -156,7 +157,9 @@ export default function RecipeGeneratorScreen() {
               )}
             </View>
 
-            {availableProducts.length === 0 ? (
+            {products.length === 0 ? (
+              <AIEmptyInventoryState message="Add products to your inventory first, then AI can turn your fresh items into low-waste recipes." />
+            ) : availableProducts.length === 0 ? (
               <View style={styles.emptyCard}>
                 <AlertCircle size={24} color={theme.colors.warning} />
                 <Text style={styles.emptyTitle}>No fresh products found</Text>

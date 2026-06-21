@@ -73,15 +73,6 @@ export default function AISmartHubScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.heroCard}>
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroBadge}>
-              <Sparkles size={14} color={theme.colors.primary} />
-              <Text style={styles.heroBadgeText}>Smart assistant</Text>
-            </View>
-            <View style={styles.heroIcon}>
-              <Wand2 size={24} color={theme.colors.primary} />
-            </View>
-          </View>
           <Text style={styles.greeting}>AI Smart Hub</Text>
           <Text style={styles.title}>Make every item work harder</Text>
           <Text style={styles.subtitle}>

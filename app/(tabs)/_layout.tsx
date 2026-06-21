@@ -21,6 +21,7 @@ import {
   Plus,
   Sparkles,
   Scan,
+  ShoppingCart,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "../../src/hooks/useAppTheme";
@@ -30,10 +31,12 @@ import HomeScreen from "./index";
 import InventoryScreen from "./inventory";
 import ProfileScreen from "./profile";
 import AISmartHubScreen from "./aihub";
+import ShoppingListScreen from "./shopping";
 
 const renderScene = SceneMap({
   home: HomeScreen,
   inventory: InventoryScreen,
+  shopping: ShoppingListScreen,
   aihub: AISmartHubScreen,
   profile: ProfileScreen,
 });
@@ -48,6 +51,7 @@ export default function TabLayout() {
     () => [
       { key: "home", title: "Home", icon: Home },
       { key: "inventory", title: "Stock", icon: Package },
+      { key: "shopping", title: "Shopping", icon: ShoppingCart },
       { key: "aihub", title: "AI Hub", icon: Sparkles },
       { key: "profile", title: "Me", icon: User },
     ],

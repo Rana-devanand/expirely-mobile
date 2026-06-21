@@ -10,6 +10,17 @@ export interface User {
   auth_provider: string;
   created_at: string;
   last_login?: string;
+  daily_reminder_enabled?: boolean;
+  daily_reminder_time?: string | null;
+  daily_reminder_timezone?: string | null;
+  last_daily_reminder_sent_at?: string | null;
+}
+
+export interface ReminderSettings {
+  dailyReminderEnabled: boolean;
+  dailyReminderTime: string;
+  timezone?: string;
+  lastDailyReminderSentAt?: string | null;
 }
 
 export interface AuthResponse {

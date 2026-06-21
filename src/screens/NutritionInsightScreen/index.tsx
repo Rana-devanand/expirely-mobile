@@ -27,6 +27,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { api } from "../../services/api";
 import { Product } from "../../types";
+import AIEmptyInventoryState from "../../components/AIEmptyInventoryState";
 
 type HealthInsightResponse = {
   success: boolean;
@@ -157,38 +158,45 @@ export default function NutritionInsightScreen() {
               </Text>
             </View>
 
-            {filteredProducts.map((product: Product) => (
-              <TouchableOpacity
-                key={product.id}
-                style={styles.productItem}
-                onPress={() => handleProductSelect(product)}
-                activeOpacity={0.78}
-              >
-                <View style={styles.productLeft}>
-                  <View style={styles.productIcon}>
-                    {product.imageUrl ? (
-                      <RNImage
-                        source={{ uri: product.imageUrl }}
-                        style={styles.productImage}
-                      />
-                    ) : (
-                      <Apple size={24} color={theme.colors.primary} />
-                    )}
+            {products.length === 0 ? (
+              <AIEmptyInventoryState message="Add products to your inventory first, then Nutrition Insight can score them and surface simple health guidance." />
+            ) : (
+              filteredProducts.map((product: Product) => (
+                <TouchableOpacity
+                  key={product.id}
+                  style={styles.productItem}
+                  onPress={() => handleProductSelect(product)}
+                  activeOpacity={0.78}
+                >
+                  <View style={styles.productLeft}>
+                    <View style={styles.productIcon}>
+                      {product.imageUrl ? (
+                        <RNImage
+                          source={{ uri: product.imageUrl }}
+                          style={styles.productImage}
+                        />
+                      ) : (
+                        <Apple size={24} color={theme.colors.primary} />
+                      )}
+                    </View>
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName} numberOfLines={1}>
+                        {product.name}
+                      </Text>
+                      <Text style={styles.productMeta}>
+                        {product.category}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName} numberOfLines={1}>
-                      {product.name}
-                    </Text>
-                    <Text style={styles.productMeta}>
-                      {product.category}
-                    </Text>
+                  <View style={styles.chevronWrap}>
+                    <ChevronRight
+                      size={18}
+                      color={theme.colors.textSecondary}
+                    />
                   </View>
-                </View>
-                <View style={styles.chevronWrap}>
-                  <ChevronRight size={18} color={theme.colors.textSecondary} />
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              ))
+            )}
           </>
         ) : (
           <View>

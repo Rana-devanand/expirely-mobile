@@ -20,6 +20,7 @@ import { checkForAppUpdate } from "../src/services/inAppUpdate.service";
 import { ModalProvider } from "../src/hooks/useGlobalModal";
 import GlobalModal from "../src/components/GlobalModal";
 import Toast from "react-native-toast-message";
+import messaging from "@react-native-firebase/messaging";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -35,6 +36,7 @@ function AppLayoutContent() {
   );
   const pathname = usePathname();
   const isStartupRedirectDone = useRef(false);
+  const handledInitialNotification = useRef(false);
   const router = useRouter();
   const [isAppReady, setIsAppReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
@@ -146,6 +148,48 @@ function AppLayoutContent() {
     prepare();
   }, [dispatch, router]); // Removed pathname to prevent re-running on navigation
 
+  useEffect(() => {
+    if (!isAppReady || !isAuthenticated) return;
+
+    const navigateFromNotificationData = (data?: Record<string, string>) => {
+      if (!data) return;
+
+      if (data.type === "DAILY_REMINDER" || data.focus === "today-actions") {
+        router.push("/?focus=today-actions");
+        return;
+      }
+
+      if (data.type === "EXPIRY_WARNING" && data.productId) {
+        router.push({
+          pathname: "/product/[id]",
+          params: { id: data.productId },
+        });
+      }
+    };
+
+    const unsubscribe = messaging().onNotificationOpenedApp((remoteMessage) => {
+      navigateFromNotificationData(remoteMessage.data as Record<string, string>);
+    });
+
+    if (!handledInitialNotification.current) {
+      handledInitialNotification.current = true;
+      messaging()
+        .getInitialNotification()
+        .then((remoteMessage) => {
+          if (remoteMessage) {
+            navigateFromNotificationData(
+              remoteMessage.data as Record<string, string>,
+            );
+          }
+        })
+        .catch((error) =>
+          console.warn("[Notification] Failed to read initial notification:", error),
+        );
+    }
+
+    return unsubscribe;
+  }, [isAppReady, isAuthenticated, router]);
+
   const onLayoutRootView = useCallback(async () => {
     await SplashScreen.hideAsync();
   }, []);
@@ -215,6 +259,12 @@ function AppLayoutContent() {
                     />
                     <Stack.Screen
                       name="admin/products"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="household"
                       options={{
                         headerShown: false,
                       }}

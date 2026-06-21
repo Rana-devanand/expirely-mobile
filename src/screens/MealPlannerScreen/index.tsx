@@ -22,6 +22,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { api } from "../../services/api";
 import { getStyles } from "./styles";
+import AIEmptyInventoryState from "../../components/AIEmptyInventoryState";
 
 interface Meal {
   name: string;
@@ -52,7 +53,7 @@ export default function MealPlannerScreen() {
 
   const generatePlan = async () => {
     if (products.length === 0) {
-      Alert.alert("No Items", "Add some items to your inventory first!");
+      setMealPlan(null);
       return;
     }
 
@@ -132,6 +133,8 @@ export default function MealPlannerScreen() {
               Creating your zero-waste meal plan...
             </Text>
           </View>
+        ) : products.length === 0 ? (
+          <AIEmptyInventoryState message="Add products to your inventory first, then Meal Planner can build a simple daily plan around what you already have at home." />
         ) : mealPlan ? (
           <View>
             <View style={styles.introCard}>

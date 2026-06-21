@@ -50,6 +50,9 @@ export const ExpiryNotificationService = {
    */
   scheduleExpiryNotifications: async (product: Product) => {
     try {
+      // Clear any existing alerts for this product before rescheduling.
+      await ExpiryNotificationService.clearProductNotifications(product.id);
+
       const expiryDate = dayjs(product.expiryDate).startOf("day");
       const createdAt = product.created_at
         ? dayjs(product.created_at)
@@ -61,11 +64,10 @@ export const ExpiryNotificationService = {
       // Fetch AI generated messages
       let aiMessages;
       try {
-        const response = await notificationService.getAIExpiryMessages(
+        aiMessages = await notificationService.getAIExpiryMessages(
           product.name,
           product.category,
         );
-        aiMessages = response.data;
       } catch (e) {
         console.warn("AI Message fetch failed, using fallback", e);
       }
@@ -77,16 +79,17 @@ export const ExpiryNotificationService = {
           content: {
             title: "New Item Tracked! ✨",
             body: `You added ${product.name} to your inventory. We'll remind you before it expires!`,
-            data: { productId: product.id },
+            data: { productId: product.id, stage: "added" },
             sound: true,
+            channelId: "expiry-alerts",
             ...(Platform.OS === "android" && product.imageUrl
               ? { attachments: [{ url: product.imageUrl } as any] }
               : {}),
           } as any,
           trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: newlyAddedTrigger.toDate(),
-            channelId: "expiry-alerts",
-          } as any,
+          },
         });
       }
 
@@ -102,16 +105,17 @@ export const ExpiryNotificationService = {
             body:
               aiMessages?.sevenDays?.body ||
               `${product.name} will expire in 1 week!`,
-            data: { productId: product.id },
+            data: { productId: product.id, stage: "sevenDays" },
             sound: true,
+            channelId: "expiry-alerts",
             ...(Platform.OS === "android" && product.imageUrl
               ? { attachments: [{ url: product.imageUrl } as any] }
               : {}),
           } as any,
           trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: trigger7Days.toDate(),
-            channelId: "expiry-alerts",
-          } as any,
+          },
         });
       }
 
@@ -127,16 +131,17 @@ export const ExpiryNotificationService = {
             body:
               aiMessages?.threeDays?.body ||
               `${product.name} expires in 3 days. Use it soon!`,
-            data: { productId: product.id },
+            data: { productId: product.id, stage: "threeDays" },
             sound: true,
+            channelId: "expiry-alerts",
             ...(Platform.OS === "android" && product.imageUrl
               ? { attachments: [{ url: product.imageUrl } as any] }
               : {}),
           } as any,
           trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: trigger3Days.toDate(),
-            channelId: "expiry-alerts",
-          } as any,
+          },
         });
       }
 
@@ -170,16 +175,17 @@ export const ExpiryNotificationService = {
               content: {
                 title: aiMessages?.[t.key]?.title || t.fallbackTitle,
                 body: aiMessages?.[t.key]?.body || t.fallbackBody,
-                data: { productId: product.id },
+                data: { productId: product.id, stage: t.key },
                 sound: true,
+                channelId: "expiry-alerts",
                 ...(Platform.OS === "android" && product.imageUrl
                   ? { attachments: [{ url: product.imageUrl } as any] }
                   : {}),
               } as any,
               trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: trigger.toDate(),
-                channelId: "expiry-alerts",
-              } as any,
+              },
             });
           }
         }
@@ -194,11 +200,56 @@ export const ExpiryNotificationService = {
   },
 
   /**
+   * Cancel all scheduled notifications for a single product.
+   */
+  cancelProductNotifications: async (productId: string) => {
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      for (const n of scheduled) {
+        if (n.content.data?.productId === productId) {
+          await Notifications.cancelScheduledNotificationAsync(n.identifier);
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Failed to cancel notifications for product:",
+        productId,
+        error,
+      );
+    }
+  },
+
+  /**
+   * Cancel scheduled alerts and dismiss any currently presented notifications for a product.
+   */
+  clearProductNotifications: async (productId: string) => {
+    try {
+      await ExpiryNotificationService.cancelProductNotifications(productId);
+
+      const presented = await Notifications.getPresentedNotificationsAsync();
+      for (const notification of presented) {
+        if (notification.request.content.data?.productId === productId) {
+          await Notifications.dismissNotificationAsync(
+            notification.request.identifier,
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Failed to clear notifications for product:",
+        productId,
+        error,
+      );
+    }
+  },
+
+  /**
    * Reschedule all notifications for all products
    */
   rescheduleAll: async (products: Product[]) => {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.dismissAllNotificationsAsync();
       for (const product of products) {
         if (
           !product.isConsumed &&

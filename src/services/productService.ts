@@ -12,12 +12,16 @@ export interface CreateProductData {
   color?: string;
   qty?: number;
   isConsumed?: boolean;
+  storageLocation?: "fridge" | "freezer" | "pantry" | "medicine_box" | "other";
 }
 
 const mapBackendToProduct = (data: any): Product => {
   return {
     ...data,
     isConsumed: data.is_consumed ?? data.isConsumed,
+    remainingQty: data.remaining_qty !== undefined ? Number(data.remaining_qty) : (data.remainingQty !== undefined ? Number(data.remainingQty) : undefined),
+    lastUsedAt: data.last_used_at || data.lastUsedAt,
+    storageLocation: data.storage_location || data.storageLocation,
   };
 };
 

@@ -6,29 +6,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
 } from "react-native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useSelector, useDispatch } from "react-redux";
-import { toggleTheme, setTheme } from "../../store/uiSlice";
-import { logoutUser } from "../../store/authSlice";
+import { setTheme } from "../../store/uiSlice";
+import { logoutUser, updateReminderSettingsAsync } from "../../store/authSlice";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { RootState } from "../../store";
 import {
-  ChevronLeft,
   User,
   Lock,
   Bell,
   Shield,
-  Languages,
   ChevronRight,
   Moon,
   Sun,
   LogOut,
-  Pencil,
   Package,
   Trash2,
-  Key,
   MessageSquare,
+  Users,
+  Clock3,
 } from "lucide-react-native";
 import { getStyles } from "./styles";
 import { useRouter } from "expo-router";
@@ -37,6 +35,17 @@ import { useGlobalModal } from "../../hooks/useGlobalModal";
 import { adminService } from "../../services/adminService";
 import { api } from "../../services/api";
 import { storage } from "../../services/storage";
+import { userService } from "../../services/user";
+
+const formatReminderTime = (value: string) => {
+  const [hours, minutes] = value.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours || 0, minutes || 0, 0, 0);
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 export default function ProfileScreen() {
   const { theme, isDarkMode } = useAppTheme();
@@ -46,6 +55,14 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const [adminStats, setAdminStats] = useState<{ totalUsers: number; totalProducts: number } | null>(null);
+  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(
+    Boolean(user?.daily_reminder_enabled),
+  );
+  const [dailyReminderTime, setDailyReminderTime] = useState(
+    user?.daily_reminder_time || "20:00",
+  );
+  const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
+  const [isReminderSaving, setIsReminderSaving] = useState(false);
 
   useEffect(() => {
     if (user?.role === "ADMIN") {
@@ -60,6 +77,27 @@ export default function ProfileScreen() {
       fetchStats();
     }
   }, [user]);
+
+  useEffect(() => {
+    setDailyReminderEnabled(Boolean(user?.daily_reminder_enabled));
+    setDailyReminderTime(user?.daily_reminder_time || "20:00");
+  }, [user?.daily_reminder_enabled, user?.daily_reminder_time]);
+
+  useEffect(() => {
+    const loadReminderSettings = async () => {
+      try {
+        const response = await userService.getReminderSettings();
+        if (response.success) {
+          setDailyReminderEnabled(response.data.dailyReminderEnabled);
+          setDailyReminderTime(response.data.dailyReminderTime || "20:00");
+        }
+      } catch (error) {
+        console.warn("Failed to load reminder settings", error);
+      }
+    };
+
+    loadReminderSettings();
+  }, []);
 
   const menuItems = [
     {
@@ -76,6 +114,13 @@ export default function ProfileScreen() {
       color: "#FDF2F8",
       iconColor: "#EC4899",
       hidden: user?.auth_provider !== "local",
+    },
+    {
+      id: "household",
+      label: "Family Household",
+      icon: Users,
+      color: "#EFF7FF",
+      iconColor: "#6366F1",
     },
     {
       id: "notifications",
@@ -130,17 +175,93 @@ export default function ProfileScreen() {
           // 2. Perform logout cleanup
           dispatch(logoutUser() as any);
           router.replace("/login");
-          // 3. Show success alert
-          Alert.alert("Success", "Your account was permanently deleted.");
         } catch (error: any) {
           console.error("Account deletion failed:", error);
-          Alert.alert(
-            "Error",
-            error.message || "Failed to delete account. Please try again.",
-          );
+          showModal({
+            title: "Delete failed",
+            message:
+              error.message || "Failed to delete account. Please try again.",
+            confirmText: "OK",
+            hideCancel: true,
+            type: "danger",
+            onConfirm: () => {},
+          });
         }
       },
     });
+  };
+
+  const saveReminderSettings = async (
+    enabled: boolean,
+    time: string,
+    showSuccessAlert = false,
+  ) => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    setIsReminderSaving(true);
+    try {
+      await dispatch(
+        updateReminderSettingsAsync({
+          dailyReminderEnabled: enabled,
+          dailyReminderTime: time,
+          timezone,
+        }) as any,
+      ).unwrap();
+
+      setDailyReminderEnabled(enabled);
+      setDailyReminderTime(time);
+
+      if (showSuccessAlert) {
+        showModal({
+          title: "Reminder updated",
+          message: enabled
+            ? `Daily reminders are on for ${formatReminderTime(time)}.`
+            : "Daily reminders are turned off.",
+          confirmText: "OK",
+          hideCancel: true,
+          type: "success",
+          onConfirm: () => {},
+        });
+      }
+      return true;
+    } catch (error: any) {
+      showModal({
+        title: "Reminder update failed",
+        message: error?.message || "We couldn't save your reminder settings.",
+        confirmText: "OK",
+        hideCancel: true,
+        type: "danger",
+        onConfirm: () => {},
+      });
+      return false;
+    } finally {
+      setIsReminderSaving(false);
+    }
+  };
+
+  const handleReminderToggle = async (value: boolean) => {
+    const previousValue = dailyReminderEnabled;
+    setDailyReminderEnabled(value);
+    const success = await saveReminderSettings(value, dailyReminderTime, true);
+    if (!success) {
+      setDailyReminderEnabled(previousValue);
+    }
+  };
+
+  const handleReminderTimeConfirm = async (date: Date) => {
+    const previousTime = dailyReminderTime;
+    setShowReminderTimePicker(false);
+    const hours = `${date.getHours()}`.padStart(2, "0");
+    const minutes = `${date.getMinutes()}`.padStart(2, "0");
+    const formattedTime = `${hours}:${minutes}`;
+    setDailyReminderTime(formattedTime);
+    const success = await saveReminderSettings(
+      dailyReminderEnabled,
+      formattedTime,
+      true,
+    );
+    if (!success) {
+      setDailyReminderTime(previousTime);
+    }
   };
 
   return (
@@ -167,9 +288,6 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
-            <TouchableOpacity style={styles.editBadge}>
-              <Pencil color="#FFF" size={16} />
-            </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{user?.username || "Guest User"}</Text>
           <Text style={styles.userEmail}>
@@ -260,6 +378,44 @@ export default function ProfileScreen() {
           )}
 
           <Text style={styles.sectionLabel}>General</Text>
+          <View style={styles.reminderCard}>
+            <View style={styles.reminderRow}>
+              <View style={[styles.iconBox, styles.reminderIconBox]}>
+                <Bell size={20} color={isDarkMode ? "#A78BFA" : "#8B5CF6"} />
+              </View>
+              <View style={styles.reminderCopy}>
+                <Text style={styles.reminderTitle}>Daily Reminder</Text>
+                <Text style={styles.reminderSubtext}>
+                  Get one helpful reminder for items that need attention.
+                </Text>
+              </View>
+              <Switch
+                value={dailyReminderEnabled}
+                onValueChange={handleReminderToggle}
+                disabled={isReminderSaving}
+                trackColor={{ false: "#CBD5E1", true: "#8B5CF6" }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.timeButton,
+                (!dailyReminderEnabled || isReminderSaving) && { opacity: 0.5 },
+              ]}
+              activeOpacity={0.8}
+              disabled={!dailyReminderEnabled || isReminderSaving}
+              onPress={() => setShowReminderTimePicker(true)}
+            >
+              <View style={styles.timeButtonLeft}>
+                <Clock3 size={18} color={theme.colors.textSecondary} />
+                <Text style={styles.timeButtonText}>
+                  {formatReminderTime(dailyReminderTime)}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.menuGroup}>
             {menuItems.map((item, index) => (
               <TouchableOpacity
@@ -272,6 +428,7 @@ export default function ProfileScreen() {
                 onPress={() => {
                   if (item.id === "edit") router.push("/edit-profile");
                   if (item.id === "password") router.push("/change-password");
+                  if (item.id === "household") router.push("/household");
                   if (item.id === "notifications")
                     router.push("/notifications");
                   if (item.id === "feedback") router.push("/feedback");
@@ -358,6 +515,19 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      <DateTimePickerModal
+        isVisible={showReminderTimePicker}
+        mode="time"
+        date={(() => {
+          const [hours, minutes] = dailyReminderTime.split(":").map(Number);
+          const date = new Date();
+          date.setHours(hours || 20, minutes || 0, 0, 0);
+          return date;
+        })()}
+        onConfirm={handleReminderTimeConfirm}
+        onCancel={() => setShowReminderTimePicker(false)}
+        themeVariant={isDarkMode ? "dark" : "light"}
+      />
     </View>
   );
 }
